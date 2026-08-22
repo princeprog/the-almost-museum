@@ -7,6 +7,14 @@ test("serves the exported museum landing page", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Enter the Museum" })).toHaveAttribute("href", "/museum");
 });
 
+test("rejects malformed paths without interrupting later clean routes", async ({ page, request }) => {
+  const malformedResponse = await request.get("/%ZZ", { failOnStatusCode: false });
+
+  expect(malformedResponse.status()).toBe(400);
+  await page.goto("/exhibit/new");
+  await expect(page.getByRole("textbox", { name: "Working title" })).toBeVisible();
+});
+
 test("keeps the landing experience contained and stacked on a narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
