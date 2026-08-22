@@ -166,6 +166,10 @@ input {
   max-width: 46rem;
 }
 
+.app-root > .landing-page {
+  max-width: 62rem;
+}
+
 h1,
 h2,
 h3,
@@ -194,6 +198,69 @@ h2 {
 p {
   color: var(--charcoal-muted);
   font-size: 1.05rem;
+}
+
+.landing-page {
+  display: grid;
+  gap: clamp(var(--space-7), 12vw, 9rem);
+  padding-bottom: var(--space-7);
+}
+
+.landing-page__hero {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.landing-page__frame {
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0.65rem 0.65rem 0 color-mix(in srgb, var(--brass) 28%, transparent);
+  padding: clamp(var(--space-5), 7vw, var(--space-8));
+}
+
+.landing-page__catalogue {
+  color: var(--rust);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin-bottom: clamp(var(--space-6), 5vw, var(--space-7));
+  text-transform: uppercase;
+}
+
+.landing-page__hero h1 {
+  max-width: 12ch;
+}
+
+.landing-page__lede {
+  font-size: clamp(1.15rem, 2.2vw, 1.5rem);
+  line-height: 1.45;
+  margin-bottom: 0;
+  max-width: 38rem;
+}
+
+.landing-page__enter {
+  justify-self: start;
+  text-decoration: none;
+}
+
+.landing-page__note {
+  border-left: 2px solid var(--brass);
+  max-width: 38rem;
+  padding-left: clamp(var(--space-4), 5vw, var(--space-6));
+}
+
+.landing-page__note .museum-eyebrow {
+  margin-bottom: var(--space-3);
+}
+
+.landing-page__note h2 {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  margin-bottom: var(--space-4);
+}
+
+.landing-page__note p:last-child {
+  margin-bottom: 0;
 }
 
 .skip-link {
@@ -367,6 +434,10 @@ p {
 
   .app-root {
     padding-block: var(--space-7);
+  }
+
+  .landing-page__frame {
+    box-shadow: 0.4rem 0.4rem 0 color-mix(in srgb, var(--brass) 28%, transparent);
   }
 }
 
