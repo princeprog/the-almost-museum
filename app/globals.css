@@ -335,6 +335,23 @@ p {
   color: var(--paper);
 }
 
+.empty-collection-state {
+  border-left: 2px solid var(--brass);
+  max-width: 42rem;
+  padding-left: var(--space-5);
+}
+
+.empty-collection-state h1 {
+  font-size: clamp(2.75rem, 7vw, 4.75rem);
+}
+
+.empty-collection-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block: var(--space-5);
+}
+
 .museum-field {
   display: grid;
   gap: var(--space-2);
