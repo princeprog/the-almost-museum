@@ -1,9 +1,10 @@
 import Dexie from "dexie";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ExhibitDetail } from "@/components/exhibit-detail";
+import type { Exhibit } from "@/lib/domain";
 import { ExhibitRepository } from "@/lib/persistence";
 
 const databaseNames = new Set<string>();
@@ -33,6 +34,14 @@ async function createExhibit(repository: ExhibitRepository) {
     { kind: "link", label: "Reference sketch", url: "https://example.com/sketch" },
     { kind: "note", label: "Field note", note: "Keep the handoff calm." },
   ]);
+}
+
+function deferred<T>() {
+  let resolve: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve: (value: T) => resolve(value) };
 }
 
 afterEach(async () => {
@@ -71,11 +80,96 @@ describe("ExhibitDetail", () => {
     render(<ExhibitDetail repository={repository} />);
     expect(await screen.findByRole("heading", { name: "Harbor Queue" })).toBeVisible();
 
-    window.history.pushState({}, "", `/exhibit?id=${second.id}`);
+    await act(async () => {
+      window.history.replaceState({}, "", `/exhibit?id=${second.id}`);
+    });
     expect(await screen.findByRole("heading", { name: "Unsent field notes" })).toBeVisible();
 
-    window.history.pushState({}, "", "/exhibit?id=missing");
+    await act(async () => {
+      window.history.replaceState({}, "", "/exhibit");
+    });
+    expect(await screen.findByRole("heading", { name: "Choose an Exhibit" })).toBeVisible();
+
+    await act(async () => {
+      window.history.pushState({}, "", "/exhibit?id=missing");
+    });
     expect(await screen.findByRole("heading", { name: "That Exhibit is not here" })).toBeVisible();
+  });
+
+  it("refreshes the query Exhibit after a popstate event", async () => {
+    const repository = createRepository("almost-museum-detail-popstate");
+    const first = await createExhibit(repository);
+    const second = await repository.createExhibit({
+      title: "Second route",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "The next place to visit",
+    });
+    const nativePushState = window.history.pushState;
+    window.history.replaceState({}, "", `/exhibit?id=${first.id}`);
+
+    render(<ExhibitDetail repository={repository} />);
+    expect(await screen.findByRole("heading", { name: "Harbor Queue" })).toBeVisible();
+
+    await act(async () => {
+      nativePushState.call(window.history, {}, "", `/exhibit?id=${second.id}`);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(await screen.findByRole("heading", { name: "Second route" })).toBeVisible();
+  });
+
+  it("restores native history methods after its browser-query listener unmounts", async () => {
+    const repository = createRepository("almost-museum-detail-unmount");
+    const exhibit = await createExhibit(repository);
+    const nativePushState = window.history.pushState;
+    window.history.replaceState({}, "", `/exhibit?id=${exhibit.id}`);
+
+    const detail = render(<ExhibitDetail repository={repository} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+    expect(window.history.pushState).not.toBe(nativePushState);
+
+    detail.unmount();
+    expect(window.history.pushState).toBe(nativePushState);
+  });
+
+  it("keeps the newest Exhibit when an older query load resolves afterwards", async () => {
+    const firstLoad = deferred<Exhibit | undefined>();
+    const secondLoad = deferred<Exhibit | undefined>();
+    const first: Exhibit = {
+      id: "first-exhibit",
+      title: "First route",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "The first place",
+      tags: [],
+      relatedExhibitIds: [],
+      createdAt: "2026-08-23T05:00:00.000Z",
+      updatedAt: "2026-08-23T05:00:00.000Z",
+      closedAt: null,
+    };
+    const second: Exhibit = { ...first, id: "second-exhibit", title: "Second route", museumLabel: "The newest place" };
+    const requestedIds: string[] = [];
+    const repository = {
+      getExhibit: (id: string) => {
+        requestedIds.push(id);
+        return id === first.id ? firstLoad.promise : secondLoad.promise;
+      },
+      listArtifacts: async () => [],
+    } as unknown as ExhibitRepository;
+
+    const detail = render(<ExhibitDetail repository={repository} search={`?id=${first.id}`} />);
+    await waitFor(() => expect(requestedIds).toEqual([first.id]));
+    detail.rerender(<ExhibitDetail repository={repository} search={`?id=${second.id}`} />);
+    await waitFor(() => expect(requestedIds).toEqual([first.id, second.id]));
+    secondLoad.resolve(second);
+    expect(await screen.findByRole("heading", { name: "Second route" })).toBeVisible();
+
+    await act(async () => {
+      firstLoad.resolve(first);
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("heading", { name: "Second route" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "First route" })).not.toBeInTheDocument();
   });
 
   it("renders the story, rooms, and each artifact kind for the query Exhibit", async () => {
