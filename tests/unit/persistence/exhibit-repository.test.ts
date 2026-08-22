@@ -1,0 +1,438 @@
+// @vitest-environment node
+
+import Dexie from "dexie";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { ExhibitRepository } from "@/lib/persistence";
+
+const databaseNames = new Set<string>();
+const repositories = new Set<ExhibitRepository>();
+
+function createRepository(
+  name: string,
+  ids: string[],
+  now: string | string[] = "2026-08-23T02:00:00.000Z",
+): ExhibitRepository {
+  databaseNames.add(name);
+  let idIndex = 0;
+  let timeIndex = 0;
+
+  const repository = new ExhibitRepository({
+    databaseName: name,
+    createId: () => ids[idIndex++] ?? `generated-${idIndex}`,
+    now: () => new Date(Array.isArray(now) ? now[timeIndex++] ?? now.at(-1) : now),
+  });
+  repositories.add(repository);
+  return repository;
+}
+
+afterEach(async () => {
+  for (const repository of repositories) {
+    repository.close();
+  }
+  repositories.clear();
+  for (const name of databaseNames) {
+    await Dexie.delete(name);
+  }
+  databaseNames.clear();
+});
+
+describe("ExhibitRepository", () => {
+  it("creates a normalized Exhibit and its history event atomically", async () => {
+    const repository = createRepository("almost-museum-create", ["exhibit-1", "history-1"]);
+
+    const exhibit = await repository.createExhibit({
+      title: "  Harbor   Queue Redesign ",
+      type: "project",
+      status: "unfinished",
+      museumLabel: "  A clearer   way through the harbor ",
+      tags: [" Product Design ", "product design"],
+    });
+
+    expect(exhibit).toEqual({
+      id: "exhibit-1",
+      title: "Harbor Queue Redesign",
+      type: "project",
+      status: "unfinished",
+      museumLabel: "A clearer way through the harbor",
+      tags: ["Product Design"],
+      relatedExhibitIds: [],
+      createdAt: "2026-08-23T02:00:00.000Z",
+      updatedAt: "2026-08-23T02:00:00.000Z",
+      closedAt: null,
+    });
+    await expect(repository.listExhibits()).resolves.toEqual([exhibit]);
+    await expect(repository.getHistory("exhibit-1")).resolves.toEqual([
+      expect.objectContaining({
+        id: "history-1",
+        exhibitId: "exhibit-1",
+        type: "created",
+        occurredAt: "2026-08-23T02:00:00.000Z",
+      }),
+    ]);
+  });
+
+  it("gets and updates an Exhibit while appending an edited event", async () => {
+    const repository = createRepository("almost-museum-update", [
+      "exhibit-1",
+      "history-created",
+      "history-edited",
+    ]);
+    await repository.createExhibit({
+      title: "Harbor Queue",
+      type: "project",
+      status: "active",
+      museumLabel: "First label",
+    });
+
+    const updated = await repository.updateExhibit(" exhibit-1 ", {
+      title: "  Harbor   Queue Redesign ",
+      museumLabel: "  A calmer crossing ",
+      tags: [" UX ", "ux", " Maritime "],
+    });
+
+    expect(updated).toMatchObject({
+      title: "Harbor Queue Redesign",
+      museumLabel: "A calmer crossing",
+      tags: ["UX", "Maritime"],
+      updatedAt: "2026-08-23T02:00:00.000Z",
+    });
+    await expect(repository.getExhibit("exhibit-1")).resolves.toEqual(updated);
+    await expect(repository.getHistory("exhibit-1")).resolves.toEqual([
+      expect.objectContaining({ type: "created" }),
+      expect.objectContaining({
+        id: "history-edited",
+        type: "edited",
+        details: { fields: ["museumLabel", "tags", "title"] },
+      }),
+    ]);
+  });
+
+  it("stores file artifacts without changing Blob data and records artifact removal", async () => {
+    const repository = createRepository(
+      "almost-museum-artifacts",
+      ["exhibit-1", "history-created", "artifact-1", "history-added", "history-removed"],
+      [
+        "2026-08-23T02:00:00.000Z",
+        "2026-08-23T02:01:00.000Z",
+        "2026-08-23T02:02:00.000Z",
+      ],
+    );
+    await repository.createExhibit({
+      title: "Harbor Queue",
+      type: "project",
+      status: "unfinished",
+      museumLabel: "A navigation study",
+    });
+    const blob = new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/png" });
+
+    const artifact = await repository.addArtifact("exhibit-1", {
+      kind: "image",
+      label: "  First   sketch ",
+      fileName: "queue.png",
+      mimeType: "image/png",
+      byteSize: 4,
+      blob,
+    });
+
+    expect(artifact).toMatchObject({
+      id: "artifact-1",
+      exhibitId: "exhibit-1",
+      label: "First sketch",
+      kind: "image",
+      byteSize: 4,
+    });
+    const [stored] = await repository.listArtifacts("exhibit-1");
+    expect(stored.blob).toBeInstanceOf(Blob);
+    await expect(stored.blob?.arrayBuffer()).resolves.toEqual(await blob.arrayBuffer());
+
+    await repository.removeArtifact("artifact-1");
+
+    await expect(repository.listArtifacts("exhibit-1")).resolves.toEqual([]);
+    await expect(repository.getHistory("exhibit-1")).resolves.toEqual([
+      expect.objectContaining({ type: "created" }),
+      expect.objectContaining({
+        id: "history-added",
+        type: "artifact-added",
+        details: { artifactId: "artifact-1", kind: "image" },
+      }),
+      expect.objectContaining({
+        id: "history-removed",
+        type: "artifact-removed",
+        details: { artifactId: "artifact-1", kind: "image" },
+      }),
+    ]);
+  });
+
+  it("applies closure transitions with pure domain rules and appends status history", async () => {
+    const repository = createRepository("almost-museum-status", [
+      "exhibit-1",
+      "history-created",
+      "history-status",
+    ]);
+    await repository.createExhibit({
+      title: "Harbor Queue",
+      type: "project",
+      status: "active",
+      museumLabel: "A navigation study",
+    });
+
+    const closed = await repository.transitionExhibit("exhibit-1", {
+      action: "archive",
+      occurredAt: "2026-08-24T10:30:00+08:00",
+    });
+
+    expect(closed).toMatchObject({
+      status: "archived",
+      updatedAt: "2026-08-24T02:30:00.000Z",
+      closedAt: "2026-08-24T02:30:00.000Z",
+    });
+    await expect(repository.getHistory("exhibit-1")).resolves.toContainEqual(
+      expect.objectContaining({
+        id: "history-status",
+        type: "status-changed",
+        details: { action: "archive", from: "active", to: "archived" },
+      }),
+    );
+  });
+
+  it("transforms an Exhibit only when the related target exists", async () => {
+    const repository = createRepository("almost-museum-transform", [
+      "source",
+      "history-source",
+      "target",
+      "history-target",
+      "history-transform",
+    ]);
+    await repository.createExhibit({
+      title: "Source",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "The first shape",
+    });
+    await repository.createExhibit({
+      title: "Target",
+      type: "project",
+      status: "active",
+      museumLabel: "The next shape",
+    });
+
+    await expect(
+      repository.transformExhibit("source", "missing", "2026-08-24T00:00:00.000Z"),
+    ).rejects.toThrow('Related Exhibit "missing" was not found');
+    await expect(repository.getExhibit("source")).resolves.toMatchObject({
+      status: "unfinished",
+      relatedExhibitIds: [],
+    });
+
+    const transformed = await repository.transformExhibit(
+      "source",
+      " target ",
+      "2026-08-24T00:00:00.000Z",
+    );
+
+    expect(transformed).toMatchObject({
+      status: "transformed",
+      relatedExhibitIds: ["target"],
+      closedAt: "2026-08-24T00:00:00.000Z",
+    });
+    await expect(repository.getHistory("source")).resolves.toContainEqual(
+      expect.objectContaining({
+        id: "history-transform",
+        type: "transformed",
+        details: { action: "transform", from: "unfinished", relatedExhibitId: "target", to: "transformed" },
+      }),
+    );
+  });
+
+  it("persists exhibits, artifacts, and history across a database reopen", async () => {
+    const first = createRepository("almost-museum-reopen", [
+      "exhibit-1",
+      "history-created",
+      "artifact-1",
+      "history-added",
+    ]);
+    await first.createExhibit({
+      title: "Persistent Exhibit",
+      type: "experiment",
+      status: "unfinished",
+      museumLabel: "Still here",
+    });
+    await first.addArtifact("exhibit-1", {
+      kind: "note",
+      label: "Observation",
+      note: "  Keep this thought.  ",
+    });
+    first.close();
+
+    const reopened = createRepository("almost-museum-reopen", []);
+
+    await expect(reopened.getExhibit("exhibit-1")).resolves.toMatchObject({ title: "Persistent Exhibit" });
+    await expect(reopened.listArtifacts("exhibit-1")).resolves.toEqual([
+      expect.objectContaining({ id: "artifact-1", note: "Keep this thought." }),
+    ]);
+    await expect(reopened.getHistory("exhibit-1")).resolves.toHaveLength(2);
+  });
+
+  it("rolls back an Exhibit update when its history write fails", async () => {
+    const repository = createRepository("almost-museum-rollback", [
+      "exhibit-1",
+      "duplicate-history-id",
+      "duplicate-history-id",
+    ]);
+    const original = await repository.createExhibit({
+      title: "Original title",
+      type: "draft",
+      status: "unfinished",
+      museumLabel: "Original label",
+    });
+
+    await expect(repository.updateExhibit("exhibit-1", { title: "Must roll back" })).rejects.toThrow();
+
+    await expect(repository.getExhibit("exhibit-1")).resolves.toEqual(original);
+    await expect(repository.getHistory("exhibit-1")).resolves.toHaveLength(1);
+  });
+
+  it("rolls back Exhibit creation when its history write fails", async () => {
+    const repository = createRepository("almost-museum-create-rollback", [
+      "exhibit-1",
+      "duplicate-history-id",
+      "exhibit-2",
+      "duplicate-history-id",
+    ]);
+    await repository.createExhibit({
+      title: "Existing Exhibit",
+      type: "draft",
+      status: "unfinished",
+      museumLabel: "Existing label",
+    });
+
+    await expect(repository.createExhibit({
+      title: "Rolled-back Exhibit",
+      type: "idea",
+      status: "active",
+      museumLabel: "Must not survive",
+    })).rejects.toThrow();
+
+    await expect(repository.getExhibit("exhibit-2")).resolves.toBeUndefined();
+    await expect(repository.listExhibits()).resolves.toHaveLength(1);
+  });
+
+  it("rolls back artifact removal when its history write fails", async () => {
+    const repository = createRepository("almost-museum-artifact-rollback", [
+      "exhibit-1",
+      "history-created",
+      "artifact-1",
+      "duplicate-history-id",
+      "duplicate-history-id",
+    ]);
+    await repository.createExhibit({
+      title: "Artifact Exhibit",
+      type: "experiment",
+      status: "unfinished",
+      museumLabel: "Evidence stays intact",
+    });
+    await repository.addArtifact("exhibit-1", {
+      kind: "note",
+      label: "Evidence",
+      note: "Keep this when deletion fails.",
+    });
+
+    await expect(repository.removeArtifact("artifact-1")).rejects.toThrow();
+
+    await expect(repository.listArtifacts("exhibit-1")).resolves.toEqual([
+      expect.objectContaining({ id: "artifact-1" }),
+    ]);
+    await expect(repository.getHistory("exhibit-1")).resolves.toHaveLength(2);
+  });
+
+  it("rolls back status and transform relationship writes when history cannot append", async () => {
+    const statusRepository = createRepository("almost-museum-status-rollback", [
+      "exhibit-1",
+      "duplicate-history-id",
+      "duplicate-history-id",
+    ]);
+    await statusRepository.createExhibit({
+      title: "Status Exhibit",
+      type: "project",
+      status: "active",
+      museumLabel: "Keep active",
+    });
+
+    await expect(statusRepository.transitionExhibit("exhibit-1", {
+      action: "archive",
+      occurredAt: "2026-08-24T00:00:00.000Z",
+    })).rejects.toThrow();
+    await expect(statusRepository.getExhibit("exhibit-1")).resolves.toMatchObject({
+      status: "active",
+      closedAt: null,
+    });
+
+    const transformRepository = createRepository("almost-museum-transform-rollback", [
+      "source",
+      "duplicate-source-history",
+      "target",
+      "target-history",
+      "duplicate-source-history",
+    ]);
+    await transformRepository.createExhibit({
+      title: "Source",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "Keep the first shape",
+    });
+    await transformRepository.createExhibit({
+      title: "Target",
+      type: "project",
+      status: "active",
+      museumLabel: "A possible next shape",
+    });
+
+    await expect(transformRepository.transformExhibit(
+      "source",
+      "target",
+      "2026-08-24T00:00:00.000Z",
+    )).rejects.toThrow();
+    await expect(transformRepository.getExhibit("source")).resolves.toMatchObject({
+      status: "unfinished",
+      relatedExhibitIds: [],
+      closedAt: null,
+    });
+  });
+
+  it("reports missing records without creating recovery writes", async () => {
+    const repository = createRepository("almost-museum-missing", []);
+
+    await expect(repository.updateExhibit("missing", { title: "No record" })).rejects.toThrow(
+      'Exhibit "missing" was not found',
+    );
+    await expect(repository.removeArtifact("missing-artifact")).rejects.toThrow(
+      'Artifact "missing-artifact" was not found',
+    );
+    await expect(repository.getSnapshot()).resolves.toEqual({ exhibits: [], artifacts: [], history: [] });
+  });
+
+  it("erases all three collections in one clear-all operation", async () => {
+    const repository = createRepository("almost-museum-erase", [
+      "exhibit-1",
+      "history-created",
+      "artifact-1",
+      "history-added",
+    ]);
+    await repository.createExhibit({
+      title: "Temporary Exhibit",
+      type: "message",
+      status: "unfinished",
+      museumLabel: "For now",
+    });
+    await repository.addArtifact("exhibit-1", {
+      kind: "link",
+      label: "Reference",
+      url: "https://example.com/reference",
+    });
+
+    await repository.eraseAll();
+
+    await expect(repository.getSnapshot()).resolves.toEqual({ exhibits: [], artifacts: [], history: [] });
+  });
+});
