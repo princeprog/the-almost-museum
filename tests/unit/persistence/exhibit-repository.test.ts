@@ -266,6 +266,47 @@ describe("ExhibitRepository", () => {
     await expect(repository.listArtifacts("exhibit-1")).resolves.toEqual([]);
   });
 
+  it("rejects a file whose MIME type does not match its kind through addArtifact", async () => {
+    const repository = createRepository("almost-museum-artifact-mime", ["exhibit-1", "history-created"]);
+    await repository.createExhibit({
+      title: "Harbor Queue",
+      type: "project",
+      status: "unfinished",
+      museumLabel: "A navigation study",
+    });
+
+    await expect(repository.addArtifact("exhibit-1", {
+      kind: "image",
+      label: "Mislabeled document",
+      fileName: "label.pdf",
+      mimeType: "application/pdf",
+      byteSize: 24,
+      blob: new Blob(["museum label"], { type: "application/pdf" }),
+    })).rejects.toThrow("Image artifacts must use an image/* MIME type.");
+
+    await expect(repository.listArtifacts("exhibit-1")).resolves.toEqual([]);
+  });
+
+  it("rejects a file whose MIME type does not match its kind before capture writes anything", async () => {
+    const repository = createRepository("almost-museum-capture-artifact-mime", []);
+
+    await expect(repository.captureExhibit({
+      title: "Harbor Queue",
+      type: "project",
+      status: "unfinished",
+      museumLabel: "A navigation study",
+    }, [{
+      kind: "audio",
+      label: "Mislabeled image",
+      fileName: "sketch.png",
+      mimeType: "image/png",
+      byteSize: 24,
+      blob: new Blob(["sketch"], { type: "image/png" }),
+    }])).rejects.toThrow("Audio artifacts must use an audio/* MIME type.");
+
+    await expect(repository.getSnapshot()).resolves.toEqual({ exhibits: [], artifacts: [], history: [] });
+  });
+
   it("applies closure transitions with pure domain rules and appends status history", async () => {
     const repository = createRepository("almost-museum-status", [
       "exhibit-1",

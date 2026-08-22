@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { getFileArtifactValidationError } from "@/lib/artifacts/file-validation";
 import {
   normalizeId,
   normalizeIds,
@@ -99,9 +100,18 @@ const fileArtifactFields = {
 };
 
 export const artifactSchema = z.discriminatedUnion("kind", [
-  z.object({ ...artifactBase, kind: z.literal("image"), ...fileArtifactFields }).strict(),
-  z.object({ ...artifactBase, kind: z.literal("pdf"), ...fileArtifactFields }).strict(),
-  z.object({ ...artifactBase, kind: z.literal("audio"), ...fileArtifactFields }).strict(),
+  z.object({ ...artifactBase, kind: z.literal("image"), ...fileArtifactFields }).strict().superRefine((artifact, context) => {
+    const message = getFileArtifactValidationError(artifact);
+    if (message !== undefined) context.addIssue({ code: "custom", message });
+  }),
+  z.object({ ...artifactBase, kind: z.literal("pdf"), ...fileArtifactFields }).strict().superRefine((artifact, context) => {
+    const message = getFileArtifactValidationError(artifact);
+    if (message !== undefined) context.addIssue({ code: "custom", message });
+  }),
+  z.object({ ...artifactBase, kind: z.literal("audio"), ...fileArtifactFields }).strict().superRefine((artifact, context) => {
+    const message = getFileArtifactValidationError(artifact);
+    if (message !== undefined) context.addIssue({ code: "custom", message });
+  }),
   z.object({ ...artifactBase, kind: z.literal("link"), url: z.url() }).strict(),
   z.object({ ...artifactBase, kind: z.literal("note"), note: requiredNarrativeSchema }).strict(),
 ]);

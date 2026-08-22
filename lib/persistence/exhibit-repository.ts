@@ -1,6 +1,6 @@
 import Dexie, { type Table } from "dexie";
 
-import { ARTIFACT_FILE_SIZE_LIMIT } from "@/lib/artifacts/file-validation";
+import { getFileArtifactValidationError } from "@/lib/artifacts/file-validation";
 import {
   applyClosureAction,
   artifactSchema,
@@ -108,10 +108,8 @@ function defaultCreateId(): string {
 function assertFileArtifactWithinSizeLimit(input: AddArtifactInput): void {
   if (input.kind !== "image" && input.kind !== "pdf" && input.kind !== "audio") return;
 
-  const size = input.blob?.size ?? input.byteSize;
-  if (size !== undefined && size > ARTIFACT_FILE_SIZE_LIMIT) {
-    throw new Error("Artifact files must be no larger than 25 MiB.");
-  }
+  const validationError = getFileArtifactValidationError(input);
+  if (validationError !== undefined) throw new Error(validationError);
 }
 
 export class ExhibitRepository {

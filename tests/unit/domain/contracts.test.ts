@@ -127,6 +127,11 @@ describe("canonical Exhibit domain contracts", () => {
       kind: "note",
     });
     expect(() => artifactSchema.parse({ ...common, kind: "link", note: "not a URL" })).toThrow();
+    expect(() => artifactSchema.parse({
+      ...common,
+      kind: "image",
+      mimeType: "application/pdf",
+    })).toThrow("Image artifacts must use an image/* MIME type.");
     expect(() => artifactSchema.parse({ ...common, kind: "image", fileName: "sketch.png", byteSize: -1 })).toThrow();
   });
 

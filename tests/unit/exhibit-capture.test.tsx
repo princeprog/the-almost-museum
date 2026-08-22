@@ -25,7 +25,7 @@ function createRepository(name: string): ExhibitRepository {
   return repository;
 }
 
-function createLocalFile(contents: string, name: string, type: string): File {
+function createLocalFile(contents: BlobPart, name: string, type: string): File {
   return Object.assign(new Blob([contents], { type }), { name }) as File;
 }
 
@@ -169,6 +169,31 @@ describe("ExhibitCapture", () => {
 
     expect(screen.queryByRole("img", { name: "Preview of harbor-map.png" })).not.toBeInTheDocument();
     expect(revokeObjectUrl).toHaveBeenCalledWith("blob:artifact-preview");
+  });
+
+  it("uses the total pending file bytes for quota warnings and refreshes after removal", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-quota");
+    const estimate = vi.fn().mockResolvedValue({ quota: 1_000, usage: 600 });
+    Object.defineProperty(navigator, "storage", { configurable: true, value: { estimate } });
+    const firstImage = createLocalFile(new Uint8Array(100), "first.png", "image/png");
+    const secondImage = createLocalFile(new Uint8Array(150), "second.png", "image/png");
+
+    render(<ExhibitCapture repository={repository} />);
+    await completeIdentity(user);
+    const input = screen.getByLabelText(/Choose an image, PDF, or audio file/);
+    await user.upload(input, firstImage);
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+    await user.upload(input, secondImage);
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Your collection is approaching this browser's local storage limit.",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Remove second.png" }));
+
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+    expect(estimate).toHaveBeenCalledTimes(3);
   });
 
   it("saves a valid Exhibit with its creation history and navigates to its record", async () => {
