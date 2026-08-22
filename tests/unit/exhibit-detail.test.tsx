@@ -189,6 +189,7 @@ describe("ExhibitDetail", () => {
         return id === first.id ? firstLoad.promise : secondLoad.promise;
       },
       listArtifacts: async () => [],
+      getHistory: async () => [],
     } as unknown as ExhibitRepository;
 
     const detail = render(<ExhibitDetail repository={repository} search={`?id=${first.id}`} />);
@@ -224,6 +225,7 @@ describe("ExhibitDetail", () => {
     const previewRepository = {
       getExhibit: (id: string) => repository.getExhibit(id),
       listArtifacts: async () => [...writtenArtifacts, fileArtifact],
+      getHistory: (id: string) => repository.getHistory(id),
     } as unknown as ExhibitRepository;
 
     render(<ExhibitDetail repository={previewRepository} search={`?id=${exhibit.id}`} />);
@@ -235,6 +237,25 @@ describe("ExhibitDetail", () => {
     expect(screen.getByText("Keep the handoff calm.")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Queue sketch" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Remove Queue sketch" })).toBeVisible();
+  });
+
+  it("loads the append-only Exhibit record through the repository timeline", async () => {
+    const repository = createRepository("almost-museum-detail-timeline");
+    const exhibit = await createExhibit(repository);
+    await repository.updateExhibit(exhibit.id, { museumLabel: "A revised harbor route" });
+    await repository.addArtifact(exhibit.id, { kind: "link", label: "Afterword", url: "https://example.com/afterword" });
+    await repository.transitionExhibit(exhibit.id, {
+      action: "archive",
+      occurredAt: "2026-08-23T06:00:00.000Z",
+    });
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+
+    expect(await screen.findByText("This Exhibit was archived.")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "The Almost timeline" })).toBeVisible();
+    expect(screen.getByText("This Exhibit entered the collection as an active Project.")).toBeVisible();
+    expect(screen.getByText("Catalog details were revised: Museum label.")).toBeVisible();
+    expect(screen.getAllByText("A link artifact was added to the collection.")).toHaveLength(2);
   });
 
   it("updates Exhibit fields and manages written attachments through the repository", async () => {
