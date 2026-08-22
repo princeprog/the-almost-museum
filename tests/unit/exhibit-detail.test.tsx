@@ -36,6 +36,7 @@ async function createExhibit(repository: ExhibitRepository) {
 }
 
 afterEach(async () => {
+  window.history.replaceState({}, "", "/");
   for (const repository of repositories) repository.close();
   repositories.clear();
   for (const name of databaseNames) await Dexie.delete(name);
@@ -53,6 +54,27 @@ describe("ExhibitDetail", () => {
   it("explains when the requested Exhibit is unavailable", async () => {
     render(<ExhibitDetail repository={createRepository("almost-museum-detail-missing-record")} search="?id=missing" />);
 
+    expect(await screen.findByRole("heading", { name: "That Exhibit is not here" })).toBeVisible();
+  });
+
+  it("refreshes the query Exhibit after same-page history navigation", async () => {
+    const repository = createRepository("almost-museum-detail-navigation");
+    const first = await createExhibit(repository);
+    const second = await repository.createExhibit({
+      title: "Unsent field notes",
+      type: "message",
+      status: "unfinished",
+      museumLabel: "A letter worth returning to",
+    });
+    window.history.replaceState({}, "", `/exhibit?id=${first.id}`);
+
+    render(<ExhibitDetail repository={repository} />);
+    expect(await screen.findByRole("heading", { name: "Harbor Queue" })).toBeVisible();
+
+    window.history.pushState({}, "", `/exhibit?id=${second.id}`);
+    expect(await screen.findByRole("heading", { name: "Unsent field notes" })).toBeVisible();
+
+    window.history.pushState({}, "", "/exhibit?id=missing");
     expect(await screen.findByRole("heading", { name: "That Exhibit is not here" })).toBeVisible();
   });
 
