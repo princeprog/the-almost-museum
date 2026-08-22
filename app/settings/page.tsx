@@ -1,3 +1,5 @@
+import { CollectionBackups } from "@/components/collection-backups";
+
 export default function SettingsPage() {
-  return <main><h1>Settings</h1><p>Manage your museum preferences.</p></main>;
+  return <main><CollectionBackups /></main>;
 }
