@@ -16,7 +16,12 @@ const contentTypes = {
 };
 
 function getFilePath(requestUrl) {
-  const pathname = decodeURIComponent(new URL(requestUrl ?? "/", "http://localhost").pathname);
+  let pathname;
+  try {
+    pathname = decodeURIComponent(new URL(requestUrl ?? "/", "http://localhost").pathname);
+  } catch {
+    return null;
+  }
   const requestedPath = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
   const relativePath = extname(requestedPath)
     ? requestedPath
@@ -28,6 +33,10 @@ function getFilePath(requestUrl) {
 
 const server = createServer(async (request, response) => {
   const filePath = getFilePath(request.url);
+  if (filePath === null) {
+    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Malformed request path");
+    return;
+  }
   if (filePath === undefined) {
     response.writeHead(403).end();
     return;
