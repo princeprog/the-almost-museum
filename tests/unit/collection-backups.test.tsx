@@ -30,6 +30,16 @@ afterEach(async () => {
 });
 
 describe("CollectionBackups", () => {
+  it("keeps backup controls beneath the section heading", () => {
+    const repository = createRepository("almost-museum-backup-ui-headings");
+
+    render(<CollectionBackups repository={repository} />);
+
+    expect(screen.getByRole("heading", { name: "Back up your museum", level: 2 })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Export", level: 3 })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Restore", level: 3 })).toBeVisible();
+  });
+
   it("exports the repository collection as a downloadable version-one JSON file", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-backup-ui-export");

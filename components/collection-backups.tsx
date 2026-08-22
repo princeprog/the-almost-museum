@@ -122,7 +122,7 @@ export function CollectionBackups({
 
       <section aria-labelledby="export-collection-title" className="collection-backups__section">
         <div>
-          <h2 id="export-collection-title">Export</h2>
+          <h3 id="export-collection-title">Export</h3>
           <p>Keep a JSON copy before clearing browser data or moving to another browser.</p>
         </div>
         <Button disabled={isWorking} onClick={() => void handleExport()}>Export collection</Button>
@@ -130,7 +130,7 @@ export function CollectionBackups({
 
       <section aria-labelledby="restore-collection-title" className="collection-backups__section">
         <div>
-          <h2 id="restore-collection-title">Restore</h2>
+          <h3 id="restore-collection-title">Restore</h3>
           <p>Choose an Almost Museum version 1 JSON backup to inspect it before replacing this collection.</p>
         </div>
         <label className="museum-field" htmlFor="backup-file">
