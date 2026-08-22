@@ -1,0 +1,26 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+
+# Local environment
+.env*
+!.env.example
+
+# Agent workspaces and reports
+.worktrees/
+.superpowers/
+
+# Generated service worker output
+public/sw.js
+public/swe-worker-*.js
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
