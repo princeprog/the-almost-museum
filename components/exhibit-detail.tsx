@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
+import { AlmostTimeline } from "@/components/almost-timeline";
 import { validateArtifactFile } from "@/lib/artifacts/file-validation";
 import { subscribeToLocationSearch } from "@/lib/browser/location-search";
-import { getExhibitRooms, type Artifact, type Exhibit, type ExhibitType } from "@/lib/domain";
+import { getExhibitRooms, type Artifact, type Exhibit, type ExhibitType, type HistoryEvent } from "@/lib/domain";
 import { ExhibitRepository } from "@/lib/persistence";
 
 const exhibitTypes: Array<{ value: ExhibitType; label: string }> = [
@@ -99,7 +100,10 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   const requestVersion = useRef(0);
   const [exhibit, setExhibit] = useState<Exhibit>();
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [history, setHistory] = useState<HistoryEvent[]>([]);
   const [isLoading, setIsLoading] = useState(exhibitId !== undefined);
+  const [isTimelineLoading, setIsTimelineLoading] = useState(exhibitId !== undefined);
+  const [isTimelineUnavailable, setIsTimelineUnavailable] = useState(false);
   const [isMissing, setIsMissing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -128,6 +132,9 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   function clearDetailState() {
     setExhibit(undefined);
     setArtifacts([]);
+    setHistory([]);
+    setIsTimelineLoading(false);
+    setIsTimelineUnavailable(false);
     setIsEditing(false);
     setMessage(undefined);
     setTitle("");
@@ -169,6 +176,16 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setExhibit(record);
       setArtifacts(records);
       setFormValues(record);
+      try {
+        const historyRecords = await repository.getHistory(record.id);
+        if (!isCurrentRequest()) return;
+        setHistory(historyRecords);
+      } catch {
+        if (!isCurrentRequest()) return;
+        setIsTimelineUnavailable(true);
+      } finally {
+        if (isCurrentRequest()) setIsTimelineLoading(false);
+      }
     } catch {
       if (!isCurrentRequest()) return;
       clearDetailState();
@@ -188,6 +205,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       clearDetailState();
       setIsLoading(true);
       setIsMissing(false);
+      setIsTimelineLoading(true);
       void loadExhibit(exhibitId, version);
     }
 
@@ -197,6 +215,22 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   // The repository is intentionally stable for a mounted detail view.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exhibitId, repository]);
+
+  async function refreshTimeline(id: string) {
+    const version = requestVersion.current;
+    setIsTimelineLoading(true);
+    setIsTimelineUnavailable(false);
+    try {
+      const historyRecords = await repository.getHistory(id);
+      if (requestVersion.current !== version) return;
+      setHistory(historyRecords);
+    } catch {
+      if (requestVersion.current !== version) return;
+      setIsTimelineUnavailable(true);
+    } finally {
+      if (requestVersion.current === version) setIsTimelineLoading(false);
+    }
+  }
 
   useEffect(() => () => {
     if (suppliedRepository === undefined) repository.close();
@@ -220,6 +254,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setFormValues(updated);
       setIsEditing(false);
       setMessage("Exhibit details saved.");
+      void refreshTimeline(updated.id);
     } catch {
       setMessage("Your changes are still here. Please check the required fields and try again.");
     }
@@ -238,6 +273,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setLinkLabel("");
       setLinkAddress("");
       setMessage("Link added to this Exhibit.");
+      void refreshTimeline(exhibit.id);
     } catch {
       setMessage("Use a complete link address, including https://.");
     }
@@ -255,6 +291,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setNoteLabel("");
       setNote("");
       setMessage("Note added to this Exhibit.");
+      void refreshTimeline(exhibit.id);
     } catch {
       setMessage("Your note is still here. Please try again.");
     }
@@ -277,6 +314,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       });
       setArtifacts((current) => [...current, artifact]);
       setMessage("Local file added to this Exhibit.");
+      void refreshTimeline(exhibit.id);
     } catch {
       setMessage("Your file was not added. Please try again.");
     }
@@ -287,6 +325,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       await repository.removeArtifact(artifact.id);
       setArtifacts((current) => current.filter((item) => item.id !== artifact.id));
       setMessage("Attachment removed from this Exhibit.");
+      void refreshTimeline(artifact.exhibitId);
     } catch {
       setMessage("That attachment could not be removed. Please try again.");
     }
@@ -339,6 +378,8 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
           </dl>{exhibit.tags.length > 0 ? <ul aria-label="Exhibit tags" className="museum-gallery__tags">{exhibit.tags.map((tag) => <li key={tag}>{tag}</li>)}</ul> : null}</div>
         </section>
       )}
+
+      <AlmostTimeline error={isTimelineUnavailable} history={history} isLoading={isTimelineLoading} />
 
       <section className="exhibit-detail__artifacts" aria-labelledby="artifact-title">
         <header><p className="museum-eyebrow">Artifacts</p><h2 id="artifact-title">Kept with this Exhibit</h2></header>
