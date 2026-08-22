@@ -145,4 +145,33 @@ describe("history event creation", () => {
     expect(Object.isFrozen(event)).toBe(true);
     expect(Object.isFrozen(event.details)).toBe(true);
   });
+
+  it("deeply detaches and freezes nested JSON-like details", () => {
+    const details = {
+      fields: ["museumLabel"],
+      context: { source: { room: "workshop" }, flags: [true, null] },
+    };
+    const event = createHistoryEvent({
+      id: "event-2",
+      exhibitId: "exhibit-1",
+      type: "edited",
+      occurredAt: "2026-08-23T02:00:00.000Z",
+      summary: "Updated the story.",
+      details,
+    });
+
+    details.fields.push("title");
+    details.context.source.room = "archive";
+    details.context.flags[0] = false;
+    const eventDetails = event.details as typeof details;
+
+    expect(eventDetails).toEqual({
+      fields: ["museumLabel"],
+      context: { source: { room: "workshop" }, flags: [true, null] },
+    });
+    expect(Object.isFrozen(eventDetails.fields)).toBe(true);
+    expect(Object.isFrozen(eventDetails.context)).toBe(true);
+    expect(Object.isFrozen(eventDetails.context.source)).toBe(true);
+    expect(Object.isFrozen(eventDetails.context.flags)).toBe(true);
+  });
 });

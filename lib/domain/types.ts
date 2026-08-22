@@ -1,4 +1,4 @@
-export type ExhibitType = "idea" | "project" | "experiment" | "active" | "message";
+export type ExhibitType = "project" | "draft" | "idea" | "experiment" | "message";
 
 export type ExhibitStatus =
   | "unfinished"
