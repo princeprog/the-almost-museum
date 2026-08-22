@@ -16,8 +16,13 @@
 
 ## Verification
 
-- `pnpm vitest run tests/unit/persistence/exhibit-repository.test.ts tests/unit/archive-privacy-settings.test.tsx tests/unit/browser/storage-status.test.ts tests/unit/collection-backups.test.tsx` — 26 tests passed.
-- `pnpm test:unit` — 21 files / 117 tests passed.
+- `pnpm vitest run tests/unit/persistence/exhibit-repository.test.ts tests/unit/archive-privacy-settings.test.tsx tests/unit/browser/storage-status.test.ts tests/unit/collection-backups.test.tsx` — 27 tests passed.
+- `pnpm test:unit` — 21 files / 118 tests passed.
 - `pnpm typecheck` — passed.
 - `pnpm lint` — passed.
 - `pnpm build` — passed; all 9 static pages generated and exported, including `/settings`.
+
+## Fix round 1
+
+- Corrected the backup-control heading hierarchy: `Back up your museum` remains the section `h2`, while its Export and Restore subsections are `h3` headings.
+- Added a focused accessibility regression assertion for all three heading levels.
