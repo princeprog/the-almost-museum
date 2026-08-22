@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { validateArtifactFile } from "@/lib/artifacts/file-validation";
 import { subscribeToLocationSearch } from "@/lib/browser/location-search";
@@ -96,6 +96,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   const [repository] = useState(() => suppliedRepository ?? new ExhibitRepository());
   const [query, setQuery] = useState(search);
   const exhibitId = useMemo(() => readRequestedId(query), [query]);
+  const requestVersion = useRef(0);
   const [exhibit, setExhibit] = useState<Exhibit>();
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [isLoading, setIsLoading] = useState(exhibitId !== undefined);
@@ -124,6 +125,20 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     setTags(nextExhibit.tags.join(", "));
   }
 
+  function clearDetailState() {
+    setExhibit(undefined);
+    setArtifacts([]);
+    setIsEditing(false);
+    setMessage(undefined);
+    setTitle("");
+    setType("project");
+    setMuseumLabel("");
+    setWhyStarted("");
+    setWhyStopped("");
+    setWhatItTaughtMe("");
+    setTags("");
+  }
+
   useEffect(() => {
     if (search !== undefined) {
       setQuery(search);
@@ -135,37 +150,46 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     return subscribeToLocationSearch(syncQuery);
   }, [search]);
 
-  async function loadExhibit(id: string) {
-    setIsLoading(true);
-    setIsMissing(false);
+  async function loadExhibit(id: string, version: number) {
+    const isCurrentRequest = () => requestVersion.current === version;
     try {
       const record = await repository.getExhibit(id);
+      if (!isCurrentRequest()) return;
       if (record === undefined) {
-        setExhibit(undefined);
-        setArtifacts([]);
+        clearDetailState();
         setIsMissing(true);
         return;
       }
       const records = await repository.listArtifacts(record.id);
+      if (!isCurrentRequest()) return;
       setExhibit(record);
       setArtifacts(records);
       setFormValues(record);
     } catch {
-      setExhibit(undefined);
-      setArtifacts([]);
+      if (!isCurrentRequest()) return;
+      clearDetailState();
       setIsMissing(true);
     } finally {
-      setIsLoading(false);
+      if (isCurrentRequest()) setIsLoading(false);
     }
   }
 
   useEffect(() => {
+    const version = ++requestVersion.current;
     if (exhibitId === undefined) {
+      clearDetailState();
       setIsLoading(false);
       setIsMissing(false);
-      return;
+    } else {
+      clearDetailState();
+      setIsLoading(true);
+      setIsMissing(false);
+      void loadExhibit(exhibitId, version);
     }
-    void loadExhibit(exhibitId);
+
+    return () => {
+      if (requestVersion.current === version) requestVersion.current += 1;
+    };
   // The repository is intentionally stable for a mounted detail view.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exhibitId, repository]);
@@ -267,7 +291,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   if (exhibitId === undefined) {
     return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Exhibit</p><h1>Choose an Exhibit</h1><p>Open an Exhibit from the Museum to visit its story and artifacts.</p><Link className="museum-button museum-button--secondary" href="/museum">Return to the Museum</Link></main>;
   }
-  if (isLoading) return <main className="exhibit-detail"><p role="status">Opening this Exhibit…</p></main>;
+  if (isLoading || (!isMissing && exhibit?.id !== exhibitId)) return <main className="exhibit-detail"><p role="status">Opening this Exhibit…</p></main>;
   if (isMissing || exhibit === undefined) {
     return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Not found</p><h1>That Exhibit is not here</h1><p>It may have been removed, or the link may be incomplete.</p><Link className="museum-button museum-button--secondary" href="/museum">Return to the Museum</Link></main>;
   }
