@@ -3,6 +3,7 @@
 import Dexie from "dexie";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { ARTIFACT_FILE_SIZE_LIMIT } from "@/lib/artifacts/file-validation";
 import { ExhibitRepository } from "@/lib/persistence";
 
 const databaseNames = new Set<string>();
@@ -239,6 +240,30 @@ describe("ExhibitRepository", () => {
         details: { artifactId: "artifact-1", kind: "image" },
       }),
     ]);
+  });
+
+  it("rejects an oversize local file before it can be persisted", async () => {
+    const repository = createRepository(
+      "almost-museum-oversize-artifact",
+      ["exhibit-1", "history-created"],
+    );
+    await repository.createExhibit({
+      title: "Harbor Queue",
+      type: "project",
+      status: "unfinished",
+      museumLabel: "A navigation study",
+    });
+
+    await expect(repository.addArtifact("exhibit-1", {
+      kind: "image",
+      label: "Oversize sketch",
+      fileName: "oversize.png",
+      mimeType: "image/png",
+      byteSize: ARTIFACT_FILE_SIZE_LIMIT + 1,
+      blob: new Blob([new Uint8Array(ARTIFACT_FILE_SIZE_LIMIT + 1)], { type: "image/png" }),
+    })).rejects.toThrow("Artifact files must be no larger than 25 MiB.");
+
+    await expect(repository.listArtifacts("exhibit-1")).resolves.toEqual([]);
   });
 
   it("applies closure transitions with pure domain rules and appends status history", async () => {

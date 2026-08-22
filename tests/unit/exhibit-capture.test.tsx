@@ -1,13 +1,15 @@
 import Dexie from "dexie";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExhibitCapture } from "@/components/exhibit-capture";
 import { ExhibitRepository } from "@/lib/persistence";
 
 const databaseNames = new Set<string>();
 const repositories = new Set<ExhibitRepository>();
+const createObjectUrl = vi.fn<(blob: Blob) => string>();
+const revokeObjectUrl = vi.fn<(url: string) => void>();
 
 function createRepository(name: string): ExhibitRepository {
   databaseNames.add(name);
@@ -23,6 +25,10 @@ function createRepository(name: string): ExhibitRepository {
   return repository;
 }
 
+function createLocalFile(contents: string, name: string, type: string): File {
+  return Object.assign(new Blob([contents], { type }), { name }) as File;
+}
+
 async function completeIdentity(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("textbox", { name: "Working title" }), "Harbor wayfinding study");
   await user.selectOptions(screen.getByRole("combobox", { name: "Exhibit type" }), "experiment");
@@ -34,6 +40,16 @@ afterEach(async () => {
   repositories.clear();
   for (const name of databaseNames) await Dexie.delete(name);
   databaseNames.clear();
+});
+
+beforeEach(() => {
+  createObjectUrl.mockReset();
+  createObjectUrl.mockReturnValue("blob:artifact-preview");
+  revokeObjectUrl.mockReset();
+  Object.defineProperties(URL, {
+    createObjectURL: { configurable: true, value: createObjectUrl },
+    revokeObjectURL: { configurable: true, value: revokeObjectUrl },
+  });
 });
 
 describe("ExhibitCapture", () => {
@@ -115,6 +131,44 @@ describe("ExhibitCapture", () => {
         expect.objectContaining({ kind: "note", label: "A small reminder", note: "The queue needed calmer handoffs." }),
       ]);
     });
+  });
+
+  it("previews a supported local file, makes it downloadable, and saves it with the Exhibit", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-file");
+    const navigatedTo: string[] = [];
+    const image = createLocalFile("map image", "harbor-map.png", "image/png");
+
+    render(<ExhibitCapture onNavigate={(href) => navigatedTo.push(href)} repository={repository} />);
+    await completeIdentity(user);
+    await user.upload(screen.getByLabelText(/Choose an image, PDF, or audio file/), image);
+
+    expect(screen.getByRole("img", { name: "Preview of harbor-map.png" })).toHaveAttribute("src", "blob:artifact-preview");
+    expect(screen.getByRole("link", { name: "Download harbor-map.png" })).toHaveAttribute("download", "harbor-map.png");
+    expect(createObjectUrl).toHaveBeenCalledWith(expect.objectContaining({ size: image.size, type: "image/png" }));
+
+    await user.click(screen.getByRole("button", { name: "Continue to story" }));
+    await user.type(screen.getByRole("textbox", { name: "Museum label" }), "A route worth returning to");
+    await user.click(screen.getByRole("button", { name: "Save Exhibit" }));
+
+    await waitFor(async () => {
+      const [exhibit] = await repository.listExhibits();
+      expect(navigatedTo).toEqual([`/exhibit?id=${exhibit?.id}`]);
+    });
+  });
+
+  it("removes an unsaved file and releases its object URL", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-file-remove");
+    const image = createLocalFile("map image", "harbor-map.png", "image/png");
+
+    render(<ExhibitCapture repository={repository} />);
+    await completeIdentity(user);
+    await user.upload(screen.getByLabelText(/Choose an image, PDF, or audio file/), image);
+    await user.click(screen.getByRole("button", { name: "Remove harbor-map.png" }));
+
+    expect(screen.queryByRole("img", { name: "Preview of harbor-map.png" })).not.toBeInTheDocument();
+    expect(revokeObjectUrl).toHaveBeenCalledWith("blob:artifact-preview");
   });
 
   it("saves a valid Exhibit with its creation history and navigates to its record", async () => {

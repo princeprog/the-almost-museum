@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
+import { validateArtifactFile, type ValidatedFileArtifact } from "@/lib/artifacts/file-validation";
+import { getStorageQuotaWarning } from "@/lib/artifacts/storage-quota";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import type { ExhibitStatus, ExhibitType } from "@/lib/domain";
@@ -20,11 +22,23 @@ const initialStatuses: Array<{ value: Extract<ExhibitStatus, "unfinished" | "act
   { value: "active", label: "Active" },
 ];
 
-interface EvidenceDraft {
-  kind: "link" | "note";
+interface LinkEvidenceDraft {
+  kind: "link";
   label: string;
   value: string;
 }
+
+interface NoteEvidenceDraft {
+  kind: "note";
+  label: string;
+  value: string;
+}
+
+interface FileEvidenceDraft extends ValidatedFileArtifact {
+  previewUrl: string;
+}
+
+type EvidenceDraft = LinkEvidenceDraft | NoteEvidenceDraft | FileEvidenceDraft;
 
 export interface ExhibitCaptureProps {
   repository?: ExhibitRepository;
@@ -57,10 +71,14 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   const [note, setNote] = useState("");
   const [evidence, setEvidence] = useState<EvidenceDraft[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [quotaWarning, setQuotaWarning] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const previewUrls = useRef(new Set<string>());
 
   useEffect(() => () => {
+    previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    previewUrls.current.clear();
     if (suppliedRepository === undefined) repository.close();
   }, [repository, suppliedRepository]);
 
@@ -124,8 +142,51 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     setErrors([]);
   }
 
+  function releasePreview(url: string) {
+    if (!previewUrls.current.delete(url)) return;
+    URL.revokeObjectURL(url);
+  }
+
+  function releaseAllPreviews() {
+    previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    previewUrls.current.clear();
+  }
+
+  async function checkStorageQuota(fileSize: number) {
+    try {
+      const estimate = await navigator.storage?.estimate?.();
+      setQuotaWarning(getStorageQuotaWarning(estimate ?? {}, fileSize));
+    } catch {
+      setQuotaWarning(undefined);
+    }
+  }
+
+  function addFile(file: File) {
+    const validation = validateArtifactFile(file);
+    if (!validation.valid) {
+      setErrors([validation.message]);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(validation.artifact.blob);
+    previewUrls.current.add(previewUrl);
+    setEvidence((current) => [...current, { ...validation.artifact, previewUrl }]);
+    setErrors([]);
+    void checkStorageQuota(validation.artifact.byteSize);
+  }
+
+  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.item(0);
+    if (file !== null && file !== undefined) addFile(file);
+    event.currentTarget.value = "";
+  }
+
   function removeEvidence(index: number) {
-    setEvidence((current) => current.filter((_, evidenceIndex) => evidenceIndex !== index));
+    setEvidence((current) => {
+      const item = current[index];
+      if (item !== undefined && "previewUrl" in item) releasePreview(item.previewUrl);
+      return current.filter((_, evidenceIndex) => evidenceIndex !== index);
+    });
   }
 
   async function saveExhibit() {
@@ -134,9 +195,18 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     setIsSaving(true);
     setErrors([]);
     try {
-      const artifacts: CaptureArtifactInput[] = evidence.map((item) => item.kind === "link"
-        ? { kind: "link", label: item.label, url: item.value }
-        : { kind: "note", label: item.label, note: item.value });
+      const artifacts: CaptureArtifactInput[] = evidence.map((item) => {
+        if (item.kind === "link") return { kind: "link", label: item.label, url: item.value };
+        if (item.kind === "note") return { kind: "note", label: item.label, note: item.value };
+        return {
+          kind: item.kind,
+          label: item.label,
+          fileName: item.fileName,
+          mimeType: item.mimeType,
+          byteSize: item.byteSize,
+          blob: item.blob,
+        };
+      });
       const exhibit = await repository.captureExhibit({
         title,
         type,
@@ -148,6 +218,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         tags: tags.split(","),
       }, artifacts);
 
+      releaseAllPreviews();
       onNavigate(`/exhibit?id=${exhibit.id}`);
     } catch {
       setErrors(["Your Exhibit is still here. Please try saving again."]);
@@ -228,7 +299,15 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         {step === 2 ? (
           <fieldset>
             <legend>Evidence</legend>
-            <p className="exhibit-capture__field-note">Both are optional. File attachments will join the collection in a later chapter.</p>
+            <p className="exhibit-capture__field-note">Each trace is optional. Images, PDFs, and audio stay in this browser alongside links and notes.</p>
+            <div className="exhibit-capture__evidence-form">
+              <label className="museum-field" htmlFor="artifact-file">
+                <span className="museum-field__label">Choose an image, PDF, or audio file</span>
+                <input accept="image/*,application/pdf,audio/*" className="museum-input" id="artifact-file" onChange={handleFileSelection} type="file" />
+                <span className="museum-field__hint">Up to 25 MiB per file. Your browser keeps these files in this private collection.</span>
+              </label>
+              {quotaWarning ? <p className="exhibit-capture__quota-warning" role="status">{quotaWarning}</p> : null}
+            </div>
             <div className="exhibit-capture__evidence-form">
               <label className="museum-field" htmlFor="link-label">
                 <span className="museum-field__label">Link label</span>
@@ -255,7 +334,18 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
               <ul className="exhibit-capture__evidence-list" aria-label="Evidence waiting to be saved">
                 {evidence.map((item, index) => (
                   <li key={`${item.kind}-${item.label}-${index}`}>
-                    <span><strong>{item.label}</strong> <small>{item.kind === "link" ? "Link" : "Note"}</small></span>
+                    <div>
+                      <span><strong>{item.label}</strong> <small>{item.kind === "link" ? "Link" : item.kind === "note" ? "Note" : item.kind}</small></span>
+                      {"previewUrl" in item ? (
+                        <div className="exhibit-capture__file-preview">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- Local Blob previews require an object URL. */}
+                          {item.kind === "image" ? <img alt={`Preview of ${item.fileName}`} src={item.previewUrl} /> : null}
+                          {item.kind === "pdf" ? <iframe aria-label={`Preview of ${item.fileName}`} src={item.previewUrl} title={`Preview of ${item.fileName}`} /> : null}
+                          {item.kind === "audio" ? <audio aria-label={`Preview of ${item.fileName}`} controls src={item.previewUrl} /> : null}
+                          <a download={item.fileName} href={item.previewUrl}>Download {item.fileName}</a>
+                        </div>
+                      ) : null}
+                    </div>
                     <Button aria-label={`Remove ${item.label}`} onClick={() => removeEvidence(index)} type="button" variant="quiet">Remove</Button>
                   </li>
                 ))}

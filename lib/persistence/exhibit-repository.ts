@@ -1,5 +1,6 @@
 import Dexie, { type Table } from "dexie";
 
+import { ARTIFACT_FILE_SIZE_LIMIT } from "@/lib/artifacts/file-validation";
 import {
   applyClosureAction,
   artifactSchema,
@@ -40,7 +41,7 @@ export interface ExhibitRepositoryOptions {
   now?: () => Date;
 }
 
-interface FileArtifactInput {
+export interface FileArtifactInput {
   kind: "image" | "pdf" | "audio";
   label: string;
   fileName?: string;
@@ -62,7 +63,7 @@ export interface NoteArtifactInput {
 }
 
 export type AddArtifactInput = FileArtifactInput | LinkArtifactInput | NoteArtifactInput;
-export type CaptureArtifactInput = LinkArtifactInput | NoteArtifactInput;
+export type CaptureArtifactInput = AddArtifactInput;
 
 export interface MuseumSnapshot {
   exhibits: Exhibit[];
@@ -102,6 +103,15 @@ function defaultCreateId(): string {
   }
 
   return globalThis.crypto.randomUUID();
+}
+
+function assertFileArtifactWithinSizeLimit(input: AddArtifactInput): void {
+  if (input.kind !== "image" && input.kind !== "pdf" && input.kind !== "audio") return;
+
+  const size = input.blob?.size ?? input.byteSize;
+  if (size !== undefined && size > ARTIFACT_FILE_SIZE_LIMIT) {
+    throw new Error("Artifact files must be no larger than 25 MiB.");
+  }
 }
 
 export class ExhibitRepository {
@@ -149,6 +159,7 @@ export class ExhibitRepository {
 
   async captureExhibit(input: CreateExhibitInput, artifactInputs: CaptureArtifactInput[] = []): Promise<Exhibit> {
     const normalizedInput = createExhibitInputSchema.parse(input);
+    artifactInputs.forEach(assertFileArtifactWithinSizeLimit);
     const occurredAt = normalizeTimestamp(this.#now());
     const exhibit = exhibitSchema.parse({
       ...normalizedInput,
@@ -286,6 +297,7 @@ export class ExhibitRepository {
 
   async addArtifact(exhibitId: string, input: AddArtifactInput): Promise<Artifact> {
     const id = normalizeId(exhibitId);
+    assertFileArtifactWithinSizeLimit(input);
 
     return this.#database.transaction(
       "rw",
