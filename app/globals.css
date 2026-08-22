@@ -56,13 +56,17 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
 button,
 a,
-input {
+input,
+select,
+textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -385,6 +389,176 @@ p {
   color: color-mix(in srgb, var(--charcoal-muted) 70%, transparent);
 }
 
+.exhibit-capture {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 48rem;
+}
+
+.exhibit-capture__header {
+  max-width: 40rem;
+}
+
+.exhibit-capture__header h1 {
+  font-size: clamp(2.75rem, 7vw, 5.25rem);
+}
+
+.exhibit-capture__header p:last-child {
+  font-size: 1.15rem;
+  margin-bottom: 0;
+}
+
+.exhibit-capture__progress {
+  border-block: 1px solid var(--border);
+  padding-block: var(--space-4);
+}
+
+.exhibit-capture__progress progress {
+  accent-color: var(--rust);
+  height: 0.45rem;
+  width: 100%;
+}
+
+.exhibit-capture__progress ol {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.exhibit-capture__progress li {
+  color: var(--charcoal-muted);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.exhibit-capture__progress li[aria-current="step"] {
+  color: var(--rust-deep);
+}
+
+.exhibit-capture__progress li span {
+  border: 1px solid currentColor;
+  display: inline-grid;
+  height: 1.35rem;
+  margin-right: var(--space-2);
+  place-items: center;
+  width: 1.35rem;
+}
+
+.exhibit-capture__step-panel {
+  background: color-mix(in srgb, var(--paper) 74%, transparent);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0.5rem 0.5rem 0 color-mix(in srgb, var(--brass) 23%, transparent);
+  display: grid;
+  gap: var(--space-5);
+  padding: clamp(var(--space-4), 5vw, var(--space-6));
+}
+
+.exhibit-capture fieldset {
+  border: 0;
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.exhibit-capture legend {
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 4vw, 2.35rem);
+  margin-bottom: var(--space-2);
+  padding: 0;
+}
+
+.exhibit-capture textarea.museum-input {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.exhibit-capture__errors {
+  background: color-mix(in srgb, var(--rust) 12%, var(--paper));
+  border-left: 3px solid var(--rust-deep);
+  padding: var(--space-3) var(--space-4);
+}
+
+.exhibit-capture__errors p {
+  color: var(--charcoal);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.exhibit-capture__errors p + p {
+  margin-top: var(--space-2);
+}
+
+.exhibit-capture__field-note {
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+.exhibit-capture__evidence-form {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+
+.exhibit-capture__evidence-form .museum-button {
+  justify-self: start;
+}
+
+.exhibit-capture__evidence-list {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.exhibit-capture__evidence-list li {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding-top: var(--space-3);
+}
+
+.exhibit-capture__evidence-list strong {
+  font-weight: 600;
+}
+
+.exhibit-capture__evidence-list small {
+  color: var(--charcoal-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.exhibit-capture__actions,
+.exhibit-capture__actions > div,
+.exhibit-capture__dialog-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.exhibit-capture__actions {
+  border-top: 1px solid var(--border);
+  justify-content: space-between;
+  padding-top: var(--space-5);
+}
+
+.exhibit-capture__dialog-actions {
+  justify-content: flex-end;
+}
+
 .museum-dialog-backdrop {
   align-items: center;
   background: color-mix(in srgb, var(--charcoal) 60%, transparent);
@@ -455,6 +629,22 @@ p {
 
   .landing-page__frame {
     box-shadow: 0.4rem 0.4rem 0 color-mix(in srgb, var(--brass) 28%, transparent);
+  }
+
+  .exhibit-capture__step-panel {
+    box-shadow: 0.35rem 0.35rem 0 color-mix(in srgb, var(--brass) 23%, transparent);
+  }
+
+  .exhibit-capture__actions,
+  .exhibit-capture__actions > div,
+  .exhibit-capture__dialog-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .exhibit-capture__actions .museum-button,
+  .exhibit-capture__dialog-actions .museum-button {
+    width: 100%;
   }
 }
 
