@@ -16,6 +16,10 @@ export function normalizeText(value: string): string {
   return collapseWhitespace(value);
 }
 
+export function normalizeNarrative(value: string): string {
+  return value.trim();
+}
+
 export function normalizeTags(tags: readonly string[]): string[] {
   const normalizedTags: string[] = [];
   const seen = new Set<string>();

@@ -1,8 +1,15 @@
 import { z } from "zod";
 
-import { normalizeId, normalizeIds, normalizeTags, normalizeText, normalizeTimestamp } from "./normalization";
+import {
+  normalizeId,
+  normalizeIds,
+  normalizeNarrative,
+  normalizeTags,
+  normalizeText,
+  normalizeTimestamp,
+} from "./normalization";
 
-export const exhibitTypeSchema = z.enum(["idea", "project", "experiment", "active", "message"]);
+export const exhibitTypeSchema = z.enum(["project", "draft", "idea", "experiment", "message"]);
 export const exhibitStatusSchema = z.enum([
   "unfinished",
   "active",
@@ -26,7 +33,8 @@ export const historyEventTypeSchema = z.enum([
 const idSchema = z.string().trim().min(1).transform(normalizeId);
 const timestampSchema = z.union([z.string(), z.date()]).transform(normalizeTimestamp);
 const requiredTextSchema = z.string().transform(normalizeText).pipe(z.string().min(1));
-const optionalTextSchema = z.string().transform(normalizeText).pipe(z.string().min(1)).optional();
+const requiredNarrativeSchema = z.string().transform(normalizeNarrative).pipe(z.string().min(1));
+const optionalNarrativeSchema = requiredNarrativeSchema.optional();
 const tagsSchema = z.array(z.string()).transform(normalizeTags);
 const relatedExhibitIdsSchema = z.array(idSchema).transform(normalizeIds);
 
@@ -36,9 +44,9 @@ export const exhibitSchema = z.object({
   type: exhibitTypeSchema,
   status: exhibitStatusSchema,
   museumLabel: requiredTextSchema,
-  whyStarted: optionalTextSchema,
-  whyStopped: optionalTextSchema,
-  whatItTaughtMe: optionalTextSchema,
+  whyStarted: optionalNarrativeSchema,
+  whyStopped: optionalNarrativeSchema,
+  whatItTaughtMe: optionalNarrativeSchema,
   tags: tagsSchema,
   relatedExhibitIds: relatedExhibitIdsSchema,
   createdAt: timestampSchema,
@@ -51,9 +59,9 @@ export const createExhibitInputSchema = z.object({
   type: exhibitTypeSchema,
   status: exhibitStatusSchema,
   museumLabel: requiredTextSchema,
-  whyStarted: optionalTextSchema,
-  whyStopped: optionalTextSchema,
-  whatItTaughtMe: optionalTextSchema,
+  whyStarted: optionalNarrativeSchema,
+  whyStopped: optionalNarrativeSchema,
+  whatItTaughtMe: optionalNarrativeSchema,
   tags: tagsSchema.default([]),
   relatedExhibitIds: relatedExhibitIdsSchema.default([]),
 }).strict();
@@ -62,9 +70,9 @@ export const updateExhibitInputSchema = z.object({
   title: requiredTextSchema.optional(),
   type: exhibitTypeSchema.optional(),
   museumLabel: requiredTextSchema.optional(),
-  whyStarted: optionalTextSchema,
-  whyStopped: optionalTextSchema,
-  whatItTaughtMe: optionalTextSchema,
+  whyStarted: optionalNarrativeSchema,
+  whyStopped: optionalNarrativeSchema,
+  whatItTaughtMe: optionalNarrativeSchema,
   tags: tagsSchema.optional(),
   relatedExhibitIds: relatedExhibitIdsSchema.optional(),
 }).strict().refine((input) => Object.keys(input).length > 0, {
@@ -95,7 +103,7 @@ export const artifactSchema = z.discriminatedUnion("kind", [
   z.object({ ...artifactBase, kind: z.literal("pdf"), ...fileArtifactFields }).strict(),
   z.object({ ...artifactBase, kind: z.literal("audio"), ...fileArtifactFields }).strict(),
   z.object({ ...artifactBase, kind: z.literal("link"), url: z.url() }).strict(),
-  z.object({ ...artifactBase, kind: z.literal("note"), note: requiredTextSchema }).strict(),
+  z.object({ ...artifactBase, kind: z.literal("note"), note: requiredNarrativeSchema }).strict(),
 ]);
 
 export const historyEventSchema = z.object({

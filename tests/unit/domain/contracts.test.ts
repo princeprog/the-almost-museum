@@ -3,6 +3,7 @@ import {
   backupEnvelopeV1Schema,
   createExhibitInputSchema,
   exhibitSchema,
+  exhibitTypeSchema,
   historyEventSchema,
   statusTransitionSchema,
   updateExhibitInputSchema,
@@ -33,7 +34,7 @@ const exhibit: Exhibit = {
 
 describe("canonical Exhibit domain contracts", () => {
   it("keeps the approved union members available to consumers", () => {
-    const exhibitTypes: ExhibitType[] = ["idea", "project", "experiment", "active", "message"];
+    const exhibitTypes: ExhibitType[] = ["project", "draft", "idea", "experiment", "message"];
     const exhibitStatuses: ExhibitStatus[] = [
       "unfinished",
       "active",
@@ -50,6 +51,11 @@ describe("canonical Exhibit domain contracts", () => {
     expect(exhibitStatuses).toHaveLength(7);
     expect(artifactKinds).toHaveLength(5);
     expect(closureActions).toHaveLength(5);
+  });
+
+  it("accepts draft as an Exhibit type and reserves active for Exhibit status", () => {
+    expect(exhibitTypeSchema.parse("draft")).toBe("draft");
+    expect(() => exhibitTypeSchema.parse("active")).toThrow();
   });
 
   it("normalizes canonical Exhibit fields at the validation boundary", () => {
@@ -122,6 +128,31 @@ describe("canonical Exhibit domain contracts", () => {
     });
     expect(() => artifactSchema.parse({ ...common, kind: "link", note: "not a URL" })).toThrow();
     expect(() => artifactSchema.parse({ ...common, kind: "image", fileName: "sketch.png", byteSize: -1 })).toThrow();
+  });
+
+  it("preserves paragraph breaks and intentional whitespace in reflective fields and notes", () => {
+    const whyStarted = "  First paragraph.\n\n  Second paragraph.  ";
+    const parsedExhibit = createExhibitInputSchema.parse({
+      title: "A small idea",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "First sketch",
+      whyStarted,
+    });
+    const parsedNote = artifactSchema.parse({
+      id: "artifact-1",
+      exhibitId: "exhibit-1",
+      kind: "note",
+      label: "Working notes",
+      note: "  Keep the rough edges.\n\n    Revisit the ending.  ",
+      createdAt: "2026-08-23T01:00:00.000Z",
+    });
+
+    expect(parsedExhibit.whyStarted).toBe("First paragraph.\n\n  Second paragraph.");
+    expect(parsedNote).toMatchObject({
+      kind: "note",
+      note: "Keep the rough edges.\n\n    Revisit the ending.",
+    });
   });
 
   it("validates HistoryEvent records while retaining structured details", () => {
