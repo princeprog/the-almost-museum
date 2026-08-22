@@ -1,0 +1,119 @@
+import Dexie from "dexie";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { ExhibitDetail } from "@/components/exhibit-detail";
+import { ExhibitRepository } from "@/lib/persistence";
+
+const databaseNames = new Set<string>();
+const repositories = new Set<ExhibitRepository>();
+
+function createRepository(name: string): ExhibitRepository {
+  databaseNames.add(name);
+  let id = 0;
+  const repository = new ExhibitRepository({
+    databaseName: name,
+    createId: () => `detail-${++id}`,
+    now: () => new Date("2026-08-23T05:00:00.000Z"),
+  });
+  repositories.add(repository);
+  return repository;
+}
+
+async function createExhibit(repository: ExhibitRepository) {
+  return repository.captureExhibit({
+    title: "Harbor Queue",
+    type: "project",
+    status: "active",
+    museumLabel: "A quieter route through the harbor",
+    whyStarted: "The waiting room needed care.",
+    tags: ["Harbor"],
+  }, [
+    { kind: "link", label: "Reference sketch", url: "https://example.com/sketch" },
+    { kind: "note", label: "Field note", note: "Keep the handoff calm." },
+  ]);
+}
+
+afterEach(async () => {
+  for (const repository of repositories) repository.close();
+  repositories.clear();
+  for (const name of databaseNames) await Dexie.delete(name);
+  databaseNames.clear();
+});
+
+describe("ExhibitDetail", () => {
+  it("explains when the query does not name an Exhibit", async () => {
+    render(<ExhibitDetail repository={createRepository("almost-museum-detail-missing-query")} search="" />);
+
+    expect(await screen.findByRole("heading", { name: "Choose an Exhibit" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Return to the Museum" })).toHaveAttribute("href", "/museum");
+  });
+
+  it("explains when the requested Exhibit is unavailable", async () => {
+    render(<ExhibitDetail repository={createRepository("almost-museum-detail-missing-record")} search="?id=missing" />);
+
+    expect(await screen.findByRole("heading", { name: "That Exhibit is not here" })).toBeVisible();
+  });
+
+  it("renders the story, rooms, and each artifact kind for the query Exhibit", async () => {
+    const repository = createRepository("almost-museum-detail-render");
+    const exhibit = await createExhibit(repository);
+    const fileArtifact = {
+      kind: "image",
+      id: "preview-file",
+      exhibitId: exhibit.id,
+      label: "Queue sketch",
+      fileName: "queue.png",
+      mimeType: "image/png",
+      byteSize: 4,
+      blob: new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/png" }),
+      createdAt: "2026-08-23T05:00:00.000Z",
+    } as const;
+    const writtenArtifacts = await repository.listArtifacts(exhibit.id);
+    const previewRepository = {
+      getExhibit: (id: string) => repository.getExhibit(id),
+      listArtifacts: async () => [...writtenArtifacts, fileArtifact],
+    } as unknown as ExhibitRepository;
+
+    render(<ExhibitDetail repository={previewRepository} search={`?id=${exhibit.id}`} />);
+
+    expect(await screen.findByRole("heading", { name: "Harbor Queue" })).toBeVisible();
+    expect(screen.getByText("Workshop")).toBeVisible();
+    expect(screen.getByText("The waiting room needed care.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Reference sketch" })).toHaveAttribute("href", "https://example.com/sketch");
+    expect(screen.getByText("Keep the handoff calm.")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Queue sketch" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Remove Queue sketch" })).toBeVisible();
+  });
+
+  it("updates Exhibit fields and manages written attachments through the repository", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-edit");
+    const exhibit = await createExhibit(repository);
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+
+    await user.click(screen.getByRole("button", { name: "Edit Exhibit" }));
+    await user.clear(screen.getByRole("textbox", { name: "Working title" }));
+    await user.type(screen.getByRole("textbox", { name: "Working title" }), "Harbor Queue, revised");
+    await user.clear(screen.getByRole("textbox", { name: "Tags" }));
+    await user.type(screen.getByRole("textbox", { name: "Tags" }), "Harbor, Research");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(async () => expect((await repository.getExhibit(exhibit.id))?.title).toBe("Harbor Queue, revised"));
+    expect(screen.getByRole("status")).toHaveTextContent("Exhibit details saved.");
+
+    await user.type(screen.getByRole("textbox", { name: "Link label" }), "Prototype");
+    await user.type(screen.getByRole("textbox", { name: "Link address" }), "https://example.com/prototype");
+    await user.click(screen.getByRole("button", { name: "Add link" }));
+    expect(await screen.findByRole("link", { name: "Prototype" })).toHaveAttribute("href", "https://example.com/prototype");
+
+    const originalArtifact = (await repository.listArtifacts(exhibit.id)).find((artifact) => artifact.label === "Field note");
+    expect(originalArtifact).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Remove Field note" }));
+    await waitFor(async () => expect(await repository.listArtifacts(exhibit.id)).not.toContainEqual(expect.objectContaining({ id: originalArtifact?.id })));
+    expect(screen.queryByText("Keep the handoff calm.")).not.toBeInTheDocument();
+  });
+});
