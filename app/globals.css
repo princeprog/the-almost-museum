@@ -51,17 +51,6 @@ body {
   line-height: 1.55;
 }
 
-body::before {
-  background-image: radial-gradient(color-mix(in srgb, var(--charcoal) 8%, transparent) 0.55px, transparent 0.7px);
-  background-size: 5px 5px;
-  content: "";
-  inset: 0;
-  opacity: 0.24;
-  pointer-events: none;
-  position: fixed;
-  z-index: -1;
-}
-
 a {
   color: inherit;
 }
@@ -85,6 +74,18 @@ input {
 
 .museum-shell {
   min-height: 100dvh;
+  position: relative;
+  z-index: 1;
+}
+
+.museum-paper-texture {
+  background-image: radial-gradient(color-mix(in srgb, var(--charcoal) 9%, transparent) 0.55px, transparent 0.7px);
+  background-size: 5px 5px;
+  inset: 0;
+  opacity: 0.3;
+  pointer-events: none;
+  position: fixed;
+  z-index: 0;
 }
 
 .site-header {

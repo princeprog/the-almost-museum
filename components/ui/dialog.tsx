@@ -4,6 +4,7 @@ import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 
 type DialogProps = {
+  "aria-describedby"?: string;
   children: ReactNode;
   description?: string;
   isOpen: boolean;
@@ -11,7 +12,7 @@ type DialogProps = {
   title: string;
 };
 
-export function Dialog({ children, description, isOpen, onOpenChange, title }: Readonly<DialogProps>) {
+export function Dialog({ "aria-describedby": ariaDescribedBy, children, description, isOpen, onOpenChange, title }: Readonly<DialogProps>) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -36,9 +37,16 @@ export function Dialog({ children, description, isOpen, onOpenChange, title }: R
 
     const focusableElements = Array.from(
       dialogRef.current?.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        "a[href], button, input, select, textarea, [tabindex]",
       ) ?? [],
-    ).filter((element) => !element.hasAttribute("hidden"));
+    ).filter((element) => {
+      const isHiddenInput = element instanceof HTMLInputElement && element.type === "hidden";
+      const isInHiddenContainer = element.closest('[aria-hidden="true"], [hidden], [inert]') !== null;
+      const styles = window.getComputedStyle(element);
+      const isVisuallyHidden = styles.display === "none" || styles.visibility === "hidden";
+
+      return element.tabIndex >= 0 && !element.hasAttribute("disabled") && !isHiddenInput && !isInHiddenContainer && !isVisuallyHidden;
+    });
 
     if (focusableElements.length === 0) {
       event.preventDefault();
@@ -61,10 +69,12 @@ export function Dialog({ children, description, isOpen, onOpenChange, title }: R
 
   if (!isOpen) return null;
 
+  const describedBy = [ariaDescribedBy, description ? descriptionId : undefined].filter(Boolean).join(" ") || undefined;
+
   return (
     <div className="museum-dialog-backdrop" onMouseDown={() => onOpenChange(false)}>
       <div
-        aria-describedby={description ? descriptionId : undefined}
+        aria-describedby={describedBy}
         aria-labelledby={titleId}
         aria-modal="true"
         className="museum-dialog"
