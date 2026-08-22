@@ -10,7 +10,7 @@
     "test": "pnpm test:unit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "serve:static": "serve out --listen 3000 --single",
+    "serve:static": "node scripts/serve-static.mjs",
     "test:e2e": "pnpm build && playwright test",
     "test:e2e:ui": "pnpm build && playwright test --ui"
   },
