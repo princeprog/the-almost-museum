@@ -137,6 +137,10 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     setWhyStopped("");
     setWhatItTaughtMe("");
     setTags("");
+    setLinkLabel("");
+    setLinkAddress("");
+    setNoteLabel("");
+    setNote("");
   }
 
   useEffect(() => {
