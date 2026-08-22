@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { validateArtifactFile } from "@/lib/artifacts/file-validation";
+import { subscribeToLocationSearch } from "@/lib/browser/location-search";
 import { getExhibitRooms, type Artifact, type Exhibit, type ExhibitType } from "@/lib/domain";
 import { ExhibitRepository } from "@/lib/persistence";
 
@@ -124,7 +125,14 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   }
 
   useEffect(() => {
-    setQuery(search ?? window.location.search);
+    if (search !== undefined) {
+      setQuery(search);
+      return;
+    }
+
+    const syncQuery = () => setQuery(window.location.search);
+    syncQuery();
+    return subscribeToLocationSearch(syncQuery);
   }, [search]);
 
   async function loadExhibit(id: string) {
