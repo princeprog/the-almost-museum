@@ -386,6 +386,75 @@ describe("ExhibitRepository", () => {
         details: { action: "transform", from: "unfinished", relatedExhibitId: "target", to: "transformed" },
       }),
     );
+    await expect(repository.getExhibit("target")).resolves.toMatchObject({
+      relatedExhibitIds: ["source"],
+    });
+  });
+
+  it("creates a related Exhibit and transforms the source with reciprocal links in one ceremony", async () => {
+    const repository = createRepository("almost-museum-transform-new", [
+      "source",
+      "history-source",
+      "target",
+      "history-target",
+      "history-transform",
+      "history-target-linked",
+    ]);
+    await repository.createExhibit({
+      title: "First Harbor Route",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "The path before it found a form",
+    });
+
+    const transformed = await repository.transformExhibitToNew("source", {
+      title: "Second Harbor Route",
+      type: "project",
+      museumLabel: "The route ready to be built",
+    }, "2026-08-24T00:00:00.000Z");
+
+    expect(transformed).toMatchObject({
+      status: "transformed",
+      relatedExhibitIds: ["target"],
+      closedAt: "2026-08-24T00:00:00.000Z",
+    });
+    await expect(repository.getExhibit("target")).resolves.toMatchObject({
+      title: "Second Harbor Route",
+      status: "unfinished",
+      relatedExhibitIds: ["source"],
+    });
+    await expect(repository.getHistory("source")).resolves.toContainEqual(
+      expect.objectContaining({
+        id: "history-transform",
+        type: "transformed",
+        details: { action: "transform", from: "unfinished", relatedExhibitId: "target", to: "transformed" },
+      }),
+    );
+    await expect(repository.getHistory("target")).resolves.toContainEqual(
+      expect.objectContaining({
+        id: "history-target-linked",
+        type: "edited",
+        details: { fields: ["relatedExhibitIds"] },
+      }),
+    );
+  });
+
+  it("rejects transforming an Exhibit into itself without changing its record", async () => {
+    const repository = createRepository("almost-museum-transform-self", ["source", "history-source"]);
+    await repository.createExhibit({
+      title: "Source",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "The first shape",
+    });
+
+    await expect(repository.transformExhibit("source", "source", "2026-08-24T00:00:00.000Z"))
+      .rejects.toThrow("An Exhibit cannot transform into itself");
+    await expect(repository.getExhibit("source")).resolves.toMatchObject({
+      status: "unfinished",
+      relatedExhibitIds: [],
+      closedAt: null,
+    });
   });
 
   it("persists exhibits, artifacts, and history across a database reopen", async () => {

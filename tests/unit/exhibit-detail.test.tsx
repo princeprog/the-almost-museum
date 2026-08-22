@@ -287,4 +287,71 @@ describe("ExhibitDetail", () => {
     await waitFor(async () => expect(await repository.listArtifacts(exhibit.id)).not.toContainEqual(expect.objectContaining({ id: originalArtifact?.id })));
     expect(screen.queryByText("Keep the handoff calm.")).not.toBeInTheDocument();
   });
+
+  it("offers only eligible closure ceremonies and refreshes the Exhibit and timeline after confirmation", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-closure");
+    const exhibit = await createExhibit(repository);
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+
+    expect(screen.queryByRole("button", { name: "Revive" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Move to Archive" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Complete" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Transform" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Release" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Move to Archive" }));
+    expect(screen.getByRole("dialog", { name: "Move to Archive?" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Archive Exhibit" }));
+
+    await waitFor(async () => expect((await repository.getExhibit(exhibit.id))?.status).toBe("archived"));
+    expect(screen.getByRole("button", { name: "Revive" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Move to Archive" })).not.toBeInTheDocument();
+    expect(await screen.findByText("This Exhibit was archived.")).toBeVisible();
+  });
+
+  it("transforms into a new Exhibit with reciprocal links and a refreshed source timeline", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-transform-new");
+    const exhibit = await createExhibit(repository);
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+
+    await user.click(screen.getByRole("button", { name: "Transform" }));
+    expect(screen.getByRole("dialog", { name: "Transform this Exhibit?" })).toBeVisible();
+    await user.click(screen.getByRole("radio", { name: "Create a new Exhibit" }));
+    await user.type(screen.getByRole("textbox", { name: "New Exhibit title" }), "Harbor Queue, rebuilt");
+    await user.type(screen.getByRole("textbox", { name: "New Exhibit label" }), "The route ready for another try");
+    await user.click(screen.getByRole("button", { name: "Transform Exhibit" }));
+
+    await waitFor(async () => expect((await repository.getExhibit(exhibit.id))?.status).toBe("transformed"));
+    const relatedId = (await repository.getExhibit(exhibit.id))?.relatedExhibitIds[0];
+    expect(relatedId).toBeDefined();
+    await expect(repository.getExhibit(relatedId!)).resolves.toMatchObject({
+      title: "Harbor Queue, rebuilt",
+      relatedExhibitIds: [exhibit.id],
+    });
+    expect(await screen.findByText("This Exhibit was transformed into a related Exhibit.")).toBeVisible();
+  });
+
+  it("requires an explicit acknowledgement before Release can be recorded", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-release");
+    const exhibit = await createExhibit(repository);
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+
+    await user.click(screen.getByRole("button", { name: "Release" }));
+    expect(screen.getByRole("dialog", { name: "Release this Exhibit?" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Release Exhibit" })).toBeDisabled();
+    await user.click(screen.getByRole("checkbox", { name: "I understand this Exhibit will be released from the active collection." }));
+    await user.click(screen.getByRole("button", { name: "Release Exhibit" }));
+
+    await waitFor(async () => expect((await repository.getExhibit(exhibit.id))?.status).toBe("released"));
+    expect(await screen.findByText("This Exhibit was released.")).toBeVisible();
+  });
 });

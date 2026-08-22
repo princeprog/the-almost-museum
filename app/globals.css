@@ -985,6 +985,28 @@ p {
   text-decoration: none;
 }
 
+.exhibit-detail__closure-dialog,
+.exhibit-detail__new-target {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.exhibit-detail__closure-dialog > .exhibit-detail__actions {
+  justify-content: flex-end;
+}
+
+.exhibit-detail__choice {
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.exhibit-detail__choice input {
+  margin-top: 0.25rem;
+}
+
 .exhibit-detail__message {
   background: color-mix(in srgb, var(--brass) 17%, var(--paper));
   border-left: 3px solid var(--brass);

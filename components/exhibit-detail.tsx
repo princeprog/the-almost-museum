@@ -4,9 +4,18 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { AlmostTimeline } from "@/components/almost-timeline";
+import { Dialog } from "@/components/ui/dialog";
 import { validateArtifactFile } from "@/lib/artifacts/file-validation";
 import { subscribeToLocationSearch } from "@/lib/browser/location-search";
-import { getExhibitRooms, type Artifact, type Exhibit, type ExhibitType, type HistoryEvent } from "@/lib/domain";
+import {
+  canApplyClosureAction,
+  getExhibitRooms,
+  type Artifact,
+  type ClosureAction,
+  type Exhibit,
+  type ExhibitType,
+  type HistoryEvent,
+} from "@/lib/domain";
 import { ExhibitRepository } from "@/lib/persistence";
 
 const exhibitTypes: Array<{ value: ExhibitType; label: string }> = [
@@ -22,6 +31,29 @@ const roomLabels = {
   archive: "Archive",
   "hall-of-second-chances": "Hall of Second Chances",
 } as const;
+
+const closureLabels: Record<ClosureAction, string> = {
+  revive: "Revive",
+  archive: "Move to Archive",
+  complete: "Complete",
+  transform: "Transform",
+  release: "Release",
+};
+
+const closureDialogTitles: Record<ClosureAction, string> = {
+  revive: "Revive this Exhibit?",
+  archive: "Move to Archive?",
+  complete: "Complete this Exhibit?",
+  transform: "Transform this Exhibit?",
+  release: "Release this Exhibit?",
+};
+
+const closureConfirmLabels: Record<Exclude<ClosureAction, "transform">, string> = {
+  revive: "Revive Exhibit",
+  archive: "Archive Exhibit",
+  complete: "Complete Exhibit",
+  release: "Release Exhibit",
+};
 
 export interface ExhibitDetailProps {
   repository?: ExhibitRepository;
@@ -118,6 +150,15 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   const [linkAddress, setLinkAddress] = useState("");
   const [noteLabel, setNoteLabel] = useState("");
   const [note, setNote] = useState("");
+  const [closureAction, setClosureAction] = useState<ClosureAction>();
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transformMode, setTransformMode] = useState<"existing" | "new">("existing");
+  const [transformCandidates, setTransformCandidates] = useState<Exhibit[]>([]);
+  const [relatedExhibitId, setRelatedExhibitId] = useState("");
+  const [newExhibitTitle, setNewExhibitTitle] = useState("");
+  const [newExhibitType, setNewExhibitType] = useState<ExhibitType>("project");
+  const [newExhibitLabel, setNewExhibitLabel] = useState("");
+  const [releaseAcknowledged, setReleaseAcknowledged] = useState(false);
 
   function setFormValues(nextExhibit: Exhibit) {
     setTitle(nextExhibit.title);
@@ -148,6 +189,15 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     setLinkAddress("");
     setNoteLabel("");
     setNote("");
+    setClosureAction(undefined);
+    setIsTransitioning(false);
+    setTransformMode("existing");
+    setTransformCandidates([]);
+    setRelatedExhibitId("");
+    setNewExhibitTitle("");
+    setNewExhibitType("project");
+    setNewExhibitLabel("");
+    setReleaseAcknowledged(false);
   }
 
   useEffect(() => {
@@ -331,6 +381,73 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     }
   }
 
+  async function openClosureDialog(action: ClosureAction) {
+    if (exhibit === undefined || !canApplyClosureAction(exhibit, action)) return;
+    setMessage(undefined);
+    setClosureAction(action);
+    setReleaseAcknowledged(false);
+    if (action !== "transform") return;
+
+    try {
+      const candidates = await repository.listExhibits();
+      setTransformCandidates(candidates.filter((candidate) => candidate.id !== exhibit.id));
+    } catch {
+      setTransformCandidates([]);
+      setMessage("The related Exhibit list is unavailable. You can still create a new Exhibit.");
+    }
+  }
+
+  function closeClosureDialog() {
+    if (isTransitioning) return;
+    setClosureAction(undefined);
+  }
+
+  async function applyClosureCeremony() {
+    if (exhibit === undefined || closureAction === undefined) return;
+    if (!canApplyClosureAction(exhibit, closureAction)) {
+      setClosureAction(undefined);
+      setMessage("This ceremony is no longer available for the current Exhibit status.");
+      return;
+    }
+    if (closureAction === "release" && !releaseAcknowledged) return;
+    if (closureAction === "transform" && transformMode === "existing" && !relatedExhibitId) {
+      setMessage("Choose an existing Exhibit, or create a new one for this transformation.");
+      return;
+    }
+    if (closureAction === "transform" && transformMode === "new" && (!newExhibitTitle.trim() || !newExhibitLabel.trim())) {
+      setMessage("Give the new Exhibit a title and museum label before transforming.");
+      return;
+    }
+
+    setIsTransitioning(true);
+    setMessage(undefined);
+    try {
+      const occurredAt = new Date();
+      const updated = closureAction === "transform"
+        ? transformMode === "existing"
+          ? await repository.transformExhibit(exhibit.id, relatedExhibitId, occurredAt)
+          : await repository.transformExhibitToNew(exhibit.id, {
+            title: newExhibitTitle,
+            type: newExhibitType,
+            museumLabel: newExhibitLabel,
+          }, occurredAt)
+        : await repository.transitionExhibit(exhibit.id, {
+          action: closureAction,
+          occurredAt,
+          ...(closureAction === "release" ? { confirmed: true } : {}),
+        });
+      setExhibit(updated);
+      setFormValues(updated);
+      setClosureAction(undefined);
+      setMessage(closureAction === "transform" ? "This Exhibit has been transformed and linked." : `${closureLabels[closureAction]} ceremony recorded.`);
+      void refreshTimeline(updated.id);
+    } catch {
+      setMessage("The ceremony could not be recorded. Your Exhibit has not been changed.");
+    } finally {
+      setIsTransitioning(false);
+    }
+  }
+
   if (exhibitId === undefined) {
     return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Exhibit</p><h1>Choose an Exhibit</h1><p>Open an Exhibit from the Museum to visit its story and artifacts.</p><Link className="museum-button museum-button--secondary" href="/museum">Return to the Museum</Link></main>;
   }
@@ -351,6 +468,9 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
         <div className="exhibit-detail__actions">
           <Link className="museum-button museum-button--quiet" href="/museum">Museum</Link>
           <button className="museum-button museum-button--primary" onClick={() => { setFormValues(exhibit); setIsEditing(true); }} type="button">Edit Exhibit</button>
+          {(["revive", "archive", "complete", "transform", "release"] as ClosureAction[])
+            .filter((action) => canApplyClosureAction(exhibit, action))
+            .map((action) => <button className="museum-button museum-button--secondary" key={action} onClick={() => void openClosureDialog(action)} type="button">{closureLabels[action]}</button>)}
         </div>
       </header>
 
@@ -390,6 +510,33 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
           <div><h3>Add a local file</h3><label className="museum-field" htmlFor="detail-file"><span className="museum-field__label">Image, PDF, or audio</span><input accept="image/*,application/pdf,audio/*" className="museum-input" id="detail-file" onChange={(event) => void addFile(event)} type="file" /></label></div>
         </div>
       </section>
+
+      {closureAction !== undefined ? (
+        <Dialog
+          description={closureAction === "transform"
+            ? "Choose an existing Exhibit or begin a linked successor. Both records will remain connected."
+            : "This records a new status change in the Exhibit timeline."}
+          isOpen
+          onOpenChange={(isOpen) => { if (!isOpen) closeClosureDialog(); }}
+          title={closureDialogTitles[closureAction]}
+        >
+          <div className="exhibit-detail__closure-dialog">
+            {closureAction === "transform" ? (
+              <>
+                <label className="museum-field exhibit-detail__choice"><input checked={transformMode === "existing"} name="transform-target" onChange={() => setTransformMode("existing")} type="radio" /> <span>Create a link to an existing Exhibit</span></label>
+                {transformMode === "existing" ? <label className="museum-field" htmlFor="transform-existing"><span className="museum-field__label">Existing Exhibit</span><select className="museum-input" id="transform-existing" onChange={(event) => setRelatedExhibitId(event.target.value)} value={relatedExhibitId}><option value="">Choose an Exhibit</option>{transformCandidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title} — {candidate.museumLabel}</option>)}</select></label> : null}
+                <label className="museum-field exhibit-detail__choice"><input checked={transformMode === "new"} name="transform-target" onChange={() => setTransformMode("new")} type="radio" /> <span>Create a new Exhibit</span></label>
+                {transformMode === "new" ? <div className="exhibit-detail__new-target"><label className="museum-field" htmlFor="transform-new-title"><span className="museum-field__label">New Exhibit title</span><input className="museum-input" id="transform-new-title" onChange={(event) => setNewExhibitTitle(event.target.value)} value={newExhibitTitle} /></label><label className="museum-field" htmlFor="transform-new-type"><span className="museum-field__label">New Exhibit type</span><select className="museum-input" id="transform-new-type" onChange={(event) => setNewExhibitType(event.target.value as ExhibitType)} value={newExhibitType}>{exhibitTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label className="museum-field" htmlFor="transform-new-label"><span className="museum-field__label">New Exhibit label</span><input className="museum-input" id="transform-new-label" onChange={(event) => setNewExhibitLabel(event.target.value)} value={newExhibitLabel} /></label></div> : null}
+              </>
+            ) : null}
+            {closureAction === "release" ? <label className="museum-field exhibit-detail__choice"><input checked={releaseAcknowledged} onChange={(event) => setReleaseAcknowledged(event.target.checked)} type="checkbox" /> <span>I understand this Exhibit will be released from the active collection.</span></label> : null}
+            <div className="exhibit-detail__actions">
+              <button className="museum-button museum-button--secondary" disabled={isTransitioning} onClick={closeClosureDialog} type="button">Cancel</button>
+              <button className="museum-button museum-button--primary" disabled={isTransitioning || (closureAction === "release" && !releaseAcknowledged)} onClick={() => void applyClosureCeremony()} type="button">{isTransitioning ? "Recording ceremony…" : closureAction === "transform" ? "Transform Exhibit" : closureConfirmLabels[closureAction]}</button>
+            </div>
+          </div>
+        </Dialog>
+      ) : null}
     </main>
   );
 }
