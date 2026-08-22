@@ -4,7 +4,11 @@ import Dexie from "dexie";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ExhibitRepository } from "@/lib/persistence";
-import { HARBOR_QUEUE_DEMO_TITLE, installHarborQueueDemo } from "@/lib/services/install-harbor-queue-demo";
+import {
+  HARBOR_QUEUE_DEMO_ID,
+  HARBOR_QUEUE_DEMO_TITLE,
+  installHarborQueueDemo,
+} from "@/lib/services/install-harbor-queue-demo";
 
 const databaseNames = new Set<string>();
 const repositories = new Set<ExhibitRepository>();
@@ -36,13 +40,13 @@ describe("Harbor Queue demo installation", () => {
   });
 
   it("installs the approved unfinished project through the repository", async () => {
-    const repository = createRepository("almost-museum-onboarding-install", ["harbor-queue", "history-created"]);
+    const repository = createRepository("almost-museum-onboarding-install", ["history-created"]);
 
     const result = await installHarborQueueDemo(repository);
 
     expect(result.installed).toBe(true);
     expect(result.exhibit).toMatchObject({
-      id: "harbor-queue",
+      id: HARBOR_QUEUE_DEMO_ID,
       title: HARBOR_QUEUE_DEMO_TITLE,
       type: "project",
       status: "unfinished",
@@ -52,13 +56,13 @@ describe("Harbor Queue demo installation", () => {
       whatItTaughtMe: "Clear moments of waiting can make coordination feel calmer without pretending the wait is gone.",
       tags: ["Product Design", "Queue Design", "Service Design", "Harbor"],
     });
-    await expect(repository.getHistory("harbor-queue")).resolves.toEqual([
+    await expect(repository.getHistory(HARBOR_QUEUE_DEMO_ID)).resolves.toEqual([
       expect.objectContaining({ type: "created" }),
     ]);
   });
 
   it("returns the existing demo without creating duplicate records on repeat installation", async () => {
-    const repository = createRepository("almost-museum-onboarding-repeat", ["harbor-queue", "history-created"]);
+    const repository = createRepository("almost-museum-onboarding-repeat", ["history-created"]);
 
     const first = await installHarborQueueDemo(repository);
     const second = await installHarborQueueDemo(repository);
@@ -68,6 +72,21 @@ describe("Harbor Queue demo installation", () => {
     await expect(repository.getSnapshot()).resolves.toMatchObject({
       exhibits: [first.exhibit],
       history: [expect.objectContaining({ exhibitId: first.exhibit.id, type: "created" })],
+    });
+  });
+
+  it("creates one demo record when installation is requested concurrently", async () => {
+    const repository = createRepository("almost-museum-onboarding-concurrent", ["history-created"]);
+
+    const results = await Promise.all([
+      installHarborQueueDemo(repository),
+      installHarborQueueDemo(repository),
+    ]);
+
+    expect(results.map((result) => result.installed).sort()).toEqual([false, true]);
+    await expect(repository.getSnapshot()).resolves.toMatchObject({
+      exhibits: [expect.objectContaining({ id: HARBOR_QUEUE_DEMO_ID })],
+      history: [expect.objectContaining({ exhibitId: HARBOR_QUEUE_DEMO_ID, type: "created" })],
     });
   });
 });

@@ -1,3 +1,5 @@
+import { MuseumOnboarding } from "@/components/museum-onboarding";
+
 export default function MuseumPage() {
-  return <main><h1>Museum</h1><p>Your collection will appear here.</p></main>;
+  return <main><MuseumOnboarding /></main>;
 }
