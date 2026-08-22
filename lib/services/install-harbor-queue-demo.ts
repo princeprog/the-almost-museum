@@ -1,5 +1,7 @@
-import type { Exhibit, CreateExhibitInput } from "@/lib/domain";
+import type { CreateExhibitInput } from "@/lib/domain";
+import type { ExhibitInstallation } from "@/lib/persistence";
 
+export const HARBOR_QUEUE_DEMO_ID = "demo-harbor-queue-redesign-v1";
 export const HARBOR_QUEUE_DEMO_TITLE = "The Harbor Queue Redesign";
 
 const harborQueueDemoInput: CreateExhibitInput = {
@@ -14,29 +16,17 @@ const harborQueueDemoInput: CreateExhibitInput = {
 };
 
 export interface ExhibitRepositoryForDemoInstallation {
-  createExhibit(input: CreateExhibitInput): Promise<Exhibit>;
-  listExhibits(): Promise<Exhibit[]>;
+  installExhibitOnce(exhibitId: string, input: CreateExhibitInput): Promise<ExhibitInstallation>;
 }
 
-export interface HarborQueueDemoInstallation {
-  exhibit: Exhibit;
-  installed: boolean;
-}
+export type HarborQueueDemoInstallation = ExhibitInstallation;
 
 /**
- * Installs the example only after an explicit user action. The title is the
- * stable demo identity so repeated requests do not add another Exhibit.
+ * Installs the example only after an explicit user action. The repository owns
+ * the stable identifier and transaction, so concurrent requests create one record.
  */
 export async function installHarborQueueDemo(
   repository: ExhibitRepositoryForDemoInstallation,
 ): Promise<HarborQueueDemoInstallation> {
-  const existing = (await repository.listExhibits()).find(
-    (exhibit) => exhibit.title === HARBOR_QUEUE_DEMO_TITLE,
-  );
-
-  if (existing !== undefined) {
-    return { exhibit: existing, installed: false };
-  }
-
-  return { exhibit: await repository.createExhibit(harborQueueDemoInput), installed: true };
+  return repository.installExhibitOnce(HARBOR_QUEUE_DEMO_ID, harborQueueDemoInput);
 }

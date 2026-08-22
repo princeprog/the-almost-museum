@@ -69,6 +69,11 @@ export interface MuseumSnapshot {
   history: HistoryEvent[];
 }
 
+export interface ExhibitInstallation {
+  exhibit: Exhibit;
+  installed: boolean;
+}
+
 export class ExhibitNotFoundError extends Error {
   constructor(exhibitId: string) {
     super(`Exhibit "${exhibitId}" was not found`);
@@ -139,6 +144,44 @@ export class ExhibitRepository {
     });
 
     return exhibitSchema.parse(exhibit);
+  }
+
+  async installExhibitOnce(exhibitId: string, input: CreateExhibitInput): Promise<ExhibitInstallation> {
+    const id = normalizeId(exhibitId);
+    const normalizedInput = createExhibitInputSchema.parse(input);
+
+    return this.#database.transaction("rw", this.#database.exhibits, this.#database.history, async () => {
+      const existing = await this.#database.exhibits.get(id);
+      if (existing !== undefined) {
+        return { exhibit: exhibitSchema.parse(existing), installed: false };
+      }
+
+      const occurredAt = normalizeTimestamp(this.#now());
+      const exhibit = exhibitSchema.parse({
+        ...normalizedInput,
+        id,
+        createdAt: occurredAt,
+        updatedAt: occurredAt,
+        closedAt: normalizedInput.status === "archived"
+          || normalizedInput.status === "completed"
+          || normalizedInput.status === "transformed"
+          || normalizedInput.status === "released"
+          ? occurredAt
+          : null,
+      });
+      const historyEvent = createHistoryEvent({
+        id: this.#createId(),
+        exhibitId: exhibit.id,
+        type: "created",
+        occurredAt,
+        summary: "Created Exhibit.",
+        details: { status: exhibit.status, type: exhibit.type },
+      });
+
+      await this.#database.exhibits.add(exhibit);
+      await this.#database.history.add(historyEvent);
+      return { exhibit: exhibitSchema.parse(exhibit), installed: true };
+    });
   }
 
   async listExhibits(): Promise<Exhibit[]> {
