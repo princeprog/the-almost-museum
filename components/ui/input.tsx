@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { InputHTMLAttributes } from "react";
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
@@ -5,19 +6,21 @@ type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   hint?: string;
 };
 
-export function Input({ className, hint, id, label, required, ...props }: Readonly<InputProps>) {
-  const inputId = id ?? `field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+export function Input({ "aria-describedby": ariaDescribedBy, className, hint, id, label, required, ...props }: Readonly<InputProps>) {
+  const generatedId = useId();
+  const inputId = id ?? `field-${generatedId}`;
   const hintId = hint ? `${inputId}-hint` : undefined;
+  const describedBy = [ariaDescribedBy, hintId].filter(Boolean).join(" ") || undefined;
   const classes = ["museum-input", className].filter(Boolean).join(" ");
 
   return (
-    <label className="museum-field" htmlFor={inputId}>
-      <span className="museum-field__label">
+    <div className="museum-field">
+      <label className="museum-field__label" htmlFor={inputId}>
         {label}
         {required ? <span aria-hidden="true"> *</span> : null}
-      </span>
-      <input aria-describedby={hintId} className={classes} id={inputId} required={required} {...props} />
+      </label>
+      <input aria-describedby={describedBy} className={classes} id={inputId} required={required} {...props} />
       {hint ? <span className="museum-field__hint" id={hintId}>{hint}</span> : null}
-    </label>
+    </div>
   );
 }
