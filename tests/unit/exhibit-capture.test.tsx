@@ -1,0 +1,149 @@
+import Dexie from "dexie";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { ExhibitCapture } from "@/components/exhibit-capture";
+import { ExhibitRepository } from "@/lib/persistence";
+
+const databaseNames = new Set<string>();
+const repositories = new Set<ExhibitRepository>();
+
+function createRepository(name: string): ExhibitRepository {
+  databaseNames.add(name);
+  const repository = new ExhibitRepository({
+    databaseName: name,
+    createId: (() => {
+      let index = 0;
+      return () => `capture-${++index}`;
+    })(),
+    now: () => new Date("2026-08-23T03:00:00.000Z"),
+  });
+  repositories.add(repository);
+  return repository;
+}
+
+async function completeIdentity(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByRole("textbox", { name: "Working title" }), "Harbor wayfinding study");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Exhibit type" }), "experiment");
+  await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
+}
+
+afterEach(async () => {
+  for (const repository of repositories) repository.close();
+  repositories.clear();
+  for (const name of databaseNames) await Dexie.delete(name);
+  databaseNames.clear();
+});
+
+describe("ExhibitCapture", () => {
+  it("keeps an incomplete identity step in place and explains the required fields", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-validation");
+
+    render(<ExhibitCapture repository={repository} />);
+
+    await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
+
+    expect(screen.getByRole("heading", { name: "Give the work a place" })).toBeVisible();
+    expect(screen.getByText("Add a title before continuing.")).toBeVisible();
+    expect(screen.getByText("Choose an Exhibit type before continuing.")).toBeVisible();
+  });
+
+  it("preserves identity values when moving back from evidence", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-preserve");
+
+    render(<ExhibitCapture repository={repository} />);
+    await user.type(screen.getByRole("textbox", { name: "Working title" }), "Harbor wayfinding study");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Exhibit type" }), "experiment");
+    await user.type(screen.getByRole("textbox", { name: "Tags" }), "harbor, navigation");
+    await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
+    await user.click(screen.getByRole("button", { name: "Back to identity" }));
+
+    expect(screen.getByRole("textbox", { name: "Working title" })).toHaveValue("Harbor wayfinding study");
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveValue("experiment");
+    expect(screen.getByRole("textbox", { name: "Tags" })).toHaveValue("harbor, navigation");
+    expect(screen.getByRole("progressbar", { name: "Capture progress" })).toHaveAttribute("value", "1");
+  });
+
+  it("keeps optional link and note evidence until the Exhibit is saved", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-evidence");
+
+    render(<ExhibitCapture onNavigate={() => undefined} repository={repository} />);
+    await completeIdentity(user);
+
+    await user.type(screen.getByRole("textbox", { name: "Link label" }), "Reference sketch");
+    await user.type(screen.getByRole("textbox", { name: "Link address" }), "https://example.com/sketch");
+    await user.click(screen.getByRole("button", { name: "Add link" }));
+    await user.type(screen.getByRole("textbox", { name: "Note label" }), "A small reminder");
+    await user.type(screen.getByRole("textbox", { name: "Note" }), "The queue needed calmer handoffs.");
+    await user.click(screen.getByRole("button", { name: "Add note" }));
+
+    expect(screen.getByText("Reference sketch")).toBeVisible();
+    expect(screen.getByText("A small reminder")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Continue to story" }));
+    await user.type(screen.getByRole("textbox", { name: "Museum label" }), "A quieter route through the harbor");
+    await user.click(screen.getByRole("button", { name: "Save Exhibit" }));
+
+    await waitFor(async () => {
+      const [exhibit] = await repository.listExhibits();
+      expect(exhibit?.title).toBe("Harbor wayfinding study");
+      await expect(repository.listArtifacts(exhibit!.id)).resolves.toEqual([
+        expect.objectContaining({ kind: "link", label: "Reference sketch", url: "https://example.com/sketch" }),
+        expect.objectContaining({ kind: "note", label: "A small reminder", note: "The queue needed calmer handoffs." }),
+      ]);
+    });
+  });
+
+  it("saves a valid Exhibit with its creation history and navigates to its record", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-save");
+    const navigatedTo: string[] = [];
+
+    render(<ExhibitCapture onNavigate={(href) => navigatedTo.push(href)} repository={repository} />);
+    await completeIdentity(user);
+    await user.click(screen.getByRole("button", { name: "Continue to story" }));
+
+    await user.click(screen.getByRole("button", { name: "Save Exhibit" }));
+    expect(screen.getByText("Add a museum label before saving.")).toBeVisible();
+
+    await user.type(screen.getByRole("textbox", { name: "Museum label" }), "A quieter route through the harbor");
+    await user.click(screen.getByRole("button", { name: "Save Exhibit" }));
+
+    await waitFor(async () => {
+      const [exhibit] = await repository.listExhibits();
+      expect(navigatedTo).toEqual([`/exhibit?id=${exhibit?.id}`]);
+      await expect(repository.getHistory(exhibit!.id)).resolves.toEqual([
+        expect.objectContaining({ type: "created", summary: "Created Exhibit." }),
+      ]);
+    });
+  });
+
+  it("offers a keyboard-reachable, narrow-safe form and protects cancellation", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-cancel");
+    const navigatedTo: string[] = [];
+    const { container } = render(<ExhibitCapture onNavigate={(href) => navigatedTo.push(href)} repository={repository} />);
+
+    expect(container.querySelector(".exhibit-capture")).toBeInTheDocument();
+    expect(container.querySelector(".exhibit-capture__step-panel")).toBeInTheDocument();
+
+    expect(screen.getByRole("textbox", { name: "Working title" })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Cancel capture" }));
+    expect(screen.getByRole("dialog", { name: "Leave this Exhibit?" })).toBeVisible();
+    expect(navigatedTo).toEqual([]);
+
+    await user.click(screen.getByRole("button", { name: "Keep capturing" }));
+    expect(screen.queryByRole("dialog", { name: "Leave this Exhibit?" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel capture" }));
+    await user.click(screen.getByRole("button", { name: "Leave without saving" }));
+    expect(navigatedTo).toEqual(["/museum"]);
+  });
+});
