@@ -132,6 +132,40 @@ describe("ExhibitDetail", () => {
     expect(window.history.pushState).toBe(nativePushState);
   });
 
+  it("clears unsaved attachment drafts after navigating through a no-ID state", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-draft-reset");
+    const first = await createExhibit(repository);
+    const second = await repository.createExhibit({
+      title: "Second route",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "The next place to visit",
+    });
+    window.history.replaceState({}, "", `/exhibit?id=${first.id}`);
+
+    render(<ExhibitDetail repository={repository} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+    await user.type(screen.getByRole("textbox", { name: "Link label" }), "Unfinished reference");
+    await user.type(screen.getByRole("textbox", { name: "Link address" }), "https://example.com/draft");
+    await user.type(screen.getByRole("textbox", { name: "Note label" }), "Unfinished note");
+    await user.type(screen.getByRole("textbox", { name: "Note" }), "This must not follow the next Exhibit.");
+
+    await act(async () => {
+      window.history.replaceState({}, "", "/exhibit");
+    });
+    expect(await screen.findByRole("heading", { name: "Choose an Exhibit" })).toBeVisible();
+
+    await act(async () => {
+      window.history.pushState({}, "", `/exhibit?id=${second.id}`);
+    });
+    expect(await screen.findByRole("heading", { name: "Second route" })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Link label" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Link address" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Note label" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Note" })).toHaveValue("");
+  });
+
   it("keeps the newest Exhibit when an older query load resolves afterwards", async () => {
     const firstLoad = deferred<Exhibit | undefined>();
     const secondLoad = deferred<Exhibit | undefined>();
