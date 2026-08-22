@@ -271,6 +271,49 @@ p {
   margin-bottom: 0;
 }
 
+.offline-page {
+  border-left: 2px solid var(--brass);
+  max-width: 42rem;
+  padding-left: var(--space-5);
+}
+
+.offline-page p:last-child {
+  font-size: 1.15rem;
+  margin-bottom: 0;
+}
+
+.service-worker-update {
+  align-items: center;
+  background: var(--charcoal);
+  border: 1px solid var(--brass-light);
+  bottom: var(--space-4);
+  box-shadow: 0.35rem 0.35rem 0 color-mix(in srgb, var(--charcoal) 34%, transparent);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  max-width: min(34rem, calc(100vw - var(--space-8)));
+  padding: var(--space-3);
+  position: fixed;
+  right: var(--space-4);
+  z-index: 20;
+}
+
+.service-worker-update p {
+  color: var(--paper);
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.service-worker-update .museum-button--secondary {
+  border-color: var(--brass-light);
+  color: var(--paper);
+  flex: 0 0 auto;
+}
+
+.service-worker-update .museum-button--secondary:hover:not(:disabled) {
+  background: var(--rust-deep);
+}
+
 .skip-link {
   background: var(--charcoal);
   color: var(--paper);

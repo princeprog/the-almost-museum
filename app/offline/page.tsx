@@ -1,3 +1,9 @@
 export default function OfflinePage() {
-  return <main><h1>Offline</h1><p>Almost Museum is available offline.</p></main>;
+  return (
+    <main className="offline-page">
+      <p className="museum-eyebrow">Connection unavailable</p>
+      <h1>You can still visit the Museum.</h1>
+      <p>The saved collection and the pages you opened are available on this device. Reconnect when you are ready to load something new.</p>
+    </main>
+  );
 }
