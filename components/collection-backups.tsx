@@ -116,7 +116,7 @@ export function CollectionBackups({
     <section aria-labelledby="collection-backups-title" className="collection-backups">
       <header>
         <p className="museum-eyebrow">Portable collection</p>
-        <h1 id="collection-backups-title">Back up your museum</h1>
+        <h2 id="collection-backups-title">Back up your museum</h2>
         <p>Exports include your Exhibits, timeline, and stored attachments. Restoring replaces this browser’s current collection only after you confirm the preview.</p>
       </header>
 
