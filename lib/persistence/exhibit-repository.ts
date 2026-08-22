@@ -49,19 +49,20 @@ interface FileArtifactInput {
   blob?: Blob;
 }
 
-interface LinkArtifactInput {
+export interface LinkArtifactInput {
   kind: "link";
   label: string;
   url: string;
 }
 
-interface NoteArtifactInput {
+export interface NoteArtifactInput {
   kind: "note";
   label: string;
   note: string;
 }
 
 export type AddArtifactInput = FileArtifactInput | LinkArtifactInput | NoteArtifactInput;
+export type CaptureArtifactInput = LinkArtifactInput | NoteArtifactInput;
 
 export interface MuseumSnapshot {
   exhibits: Exhibit[];
@@ -142,6 +143,63 @@ export class ExhibitRepository {
       await this.#database.exhibits.add(exhibit);
       await this.#database.history.add(historyEvent);
     });
+
+    return exhibitSchema.parse(exhibit);
+  }
+
+  async captureExhibit(input: CreateExhibitInput, artifactInputs: CaptureArtifactInput[] = []): Promise<Exhibit> {
+    const normalizedInput = createExhibitInputSchema.parse(input);
+    const occurredAt = normalizeTimestamp(this.#now());
+    const exhibit = exhibitSchema.parse({
+      ...normalizedInput,
+      id: this.#createId(),
+      createdAt: occurredAt,
+      updatedAt: occurredAt,
+      closedAt: normalizedInput.status === "archived"
+        || normalizedInput.status === "completed"
+        || normalizedInput.status === "transformed"
+        || normalizedInput.status === "released"
+        ? occurredAt
+        : null,
+    });
+    const createdEvent = createHistoryEvent({
+      id: this.#createId(),
+      exhibitId: exhibit.id,
+      type: "created",
+      occurredAt,
+      summary: "Created Exhibit.",
+      details: { status: exhibit.status, type: exhibit.type },
+    });
+    const artifactEntries = artifactInputs.map((input) => {
+      const artifact = artifactSchema.parse({
+        ...input,
+        id: this.#createId(),
+        exhibitId: exhibit.id,
+        createdAt: occurredAt,
+      });
+      const event = createHistoryEvent({
+        id: this.#createId(),
+        exhibitId: exhibit.id,
+        type: "artifact-added",
+        occurredAt,
+        summary: "Added an artifact.",
+        details: { artifactId: artifact.id, kind: artifact.kind },
+      });
+
+      return { artifact, event };
+    });
+
+    await this.#database.transaction(
+      "rw",
+      this.#database.exhibits,
+      this.#database.artifacts,
+      this.#database.history,
+      async () => {
+        await this.#database.exhibits.add(exhibit);
+        await this.#database.artifacts.bulkAdd(artifactEntries.map(({ artifact }) => artifact));
+        await this.#database.history.bulkAdd([createdEvent, ...artifactEntries.map(({ event }) => event)]);
+      },
+    );
 
     return exhibitSchema.parse(exhibit);
   }

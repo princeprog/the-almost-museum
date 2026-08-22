@@ -1,5 +1,5 @@
 import Dexie from "dexie";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -50,6 +50,23 @@ describe("ExhibitCapture", () => {
     expect(screen.getByText("Choose an Exhibit type before continuing.")).toBeVisible();
   });
 
+  it("keeps a missing initial status in the identity step even though the form starts unfinished", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-status-validation");
+
+    render(<ExhibitCapture repository={repository} />);
+    await user.type(screen.getByRole("textbox", { name: "Working title" }), "Harbor wayfinding study");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Exhibit type" }), "experiment");
+    const status = screen.getByRole("combobox", { name: "Initial status" });
+
+    expect(status).toHaveValue("unfinished");
+    fireEvent.change(status, { target: { value: "" } });
+    await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
+
+    expect(screen.getByRole("heading", { name: "Give the work a place" })).toBeVisible();
+    expect(screen.getByText("Choose an initial status before continuing.")).toBeVisible();
+  });
+
   it("preserves identity values when moving back from evidence", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-capture-preserve");
@@ -70,8 +87,9 @@ describe("ExhibitCapture", () => {
   it("keeps optional link and note evidence until the Exhibit is saved", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-capture-evidence");
+    const navigatedTo: string[] = [];
 
-    render(<ExhibitCapture onNavigate={() => undefined} repository={repository} />);
+    render(<ExhibitCapture onNavigate={(href) => navigatedTo.push(href)} repository={repository} />);
     await completeIdentity(user);
 
     await user.type(screen.getByRole("textbox", { name: "Link label" }), "Reference sketch");
@@ -91,6 +109,7 @@ describe("ExhibitCapture", () => {
     await waitFor(async () => {
       const [exhibit] = await repository.listExhibits();
       expect(exhibit?.title).toBe("Harbor wayfinding study");
+      expect(navigatedTo).toEqual([`/exhibit?id=${exhibit?.id}`]);
       await expect(repository.listArtifacts(exhibit!.id)).resolves.toEqual([
         expect.objectContaining({ kind: "link", label: "Reference sketch", url: "https://example.com/sketch" }),
         expect.objectContaining({ kind: "note", label: "A small reminder", note: "The queue needed calmer handoffs." }),

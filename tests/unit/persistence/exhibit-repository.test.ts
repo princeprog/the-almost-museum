@@ -72,6 +72,83 @@ describe("ExhibitRepository", () => {
     ]);
   });
 
+  it("captures an Exhibit with written artifacts and all history in one transaction", async () => {
+    const repository = createRepository("almost-museum-capture-atomic", [
+      "exhibit-1",
+      "history-created",
+      "artifact-link",
+      "history-link",
+      "artifact-note",
+      "history-note",
+    ]);
+
+    const exhibit = await repository.captureExhibit({
+      title: "Harbor wayfinding study",
+      type: "experiment",
+      status: "unfinished",
+      museumLabel: "A quieter route through the harbor",
+    }, [
+      { kind: "link", label: "Reference sketch", url: "https://example.com/sketch" },
+      { kind: "note", label: "A small reminder", note: "The queue needed calmer handoffs." },
+    ]);
+
+    await expect(repository.listArtifacts(exhibit.id)).resolves.toEqual([
+      expect.objectContaining({ id: "artifact-link", kind: "link", url: "https://example.com/sketch" }),
+      expect.objectContaining({ id: "artifact-note", kind: "note", note: "The queue needed calmer handoffs." }),
+    ]);
+    await expect(repository.getHistory(exhibit.id)).resolves.toEqual([
+      expect.objectContaining({ id: "history-created", type: "created" }),
+      expect.objectContaining({ id: "history-link", type: "artifact-added", details: { artifactId: "artifact-link", kind: "link" } }),
+      expect.objectContaining({ id: "history-note", type: "artifact-added", details: { artifactId: "artifact-note", kind: "note" } }),
+    ]);
+  });
+
+  it("rolls back a failed capture so retrying creates one complete Exhibit without a partial duplicate", async () => {
+    const repository = createRepository("almost-museum-capture-retry", [
+      "existing-exhibit",
+      "duplicate-history",
+      "failed-exhibit",
+      "duplicate-history",
+      "failed-artifact",
+      "failed-artifact-history",
+      "retry-exhibit",
+      "retry-history",
+      "retry-artifact",
+      "retry-artifact-history",
+    ]);
+    await repository.createExhibit({
+      title: "Existing Exhibit",
+      type: "draft",
+      status: "unfinished",
+      museumLabel: "Already here",
+    });
+    const captureInput = {
+      title: "Harbor wayfinding study",
+      type: "experiment" as const,
+      status: "unfinished" as const,
+      museumLabel: "A quieter route through the harbor",
+    };
+    const evidence = [{ kind: "note" as const, label: "A small reminder", note: "The queue needed calmer handoffs." }];
+
+    await expect(repository.captureExhibit(captureInput, evidence)).rejects.toThrow();
+    await expect(repository.listExhibits()).resolves.toEqual([
+      expect.objectContaining({ id: "existing-exhibit", title: "Existing Exhibit" }),
+    ]);
+    await expect(repository.getSnapshot()).resolves.toMatchObject({
+      artifacts: [],
+      history: [expect.objectContaining({ exhibitId: "existing-exhibit" })],
+    });
+
+    const retried = await repository.captureExhibit(captureInput, evidence);
+
+    await expect(repository.listExhibits()).resolves.toEqual([
+      expect.objectContaining({ id: "existing-exhibit" }),
+      expect.objectContaining({ id: "retry-exhibit", title: "Harbor wayfinding study" }),
+    ]);
+    await expect(repository.listArtifacts(retried.id)).resolves.toHaveLength(1);
+    await expect(repository.getHistory(retried.id)).resolves.toHaveLength(2);
+  });
+
   it("gets and updates an Exhibit while appending an edited event", async () => {
     const repository = createRepository("almost-museum-update", [
       "exhibit-1",

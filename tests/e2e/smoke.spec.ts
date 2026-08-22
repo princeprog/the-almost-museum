@@ -36,21 +36,23 @@ test("keeps the landing experience contained and stacked on a narrow viewport", 
   expect(noteBox!.y).toBeGreaterThan(frameBox!.y + frameBox!.height);
 });
 
-test("advances through the capture flow in the exported static page", async ({ page }) => {
-  await page.goto("/exhibit/new.html");
+test("captures an Exhibit through the exported clean routes", async ({ page }) => {
+  await page.goto("/exhibit/new");
 
   await page.getByRole("textbox", { name: "Working title" }).fill("Harbor wayfinding study");
   await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
   await page.getByRole("button", { name: "Continue to evidence" }).click();
   await page.getByRole("button", { name: "Continue to story" }).click();
+  await page.getByRole("textbox", { name: "Museum label" }).fill("A quieter route through the harbor");
+  await page.getByRole("button", { name: "Save Exhibit" }).click();
 
-  await expect(page.getByRole("textbox", { name: "Museum label" })).toBeVisible();
-  await expect(page.getByRole("progressbar", { name: "Capture progress" })).toHaveAttribute("value", "3");
+  await expect(page).toHaveURL(/\/exhibit\?id=/);
+  await expect(page.getByRole("heading", { name: "Exhibit" })).toBeVisible();
 });
 
 test("keeps the capture form inside a narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/exhibit/new.html");
+  await page.goto("/exhibit/new");
 
   await expect(page.getByRole("textbox", { name: "Working title" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue to evidence" })).toBeVisible();

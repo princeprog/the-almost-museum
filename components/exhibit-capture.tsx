@@ -5,7 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import type { ExhibitStatus, ExhibitType } from "@/lib/domain";
-import { ExhibitRepository, type AddArtifactInput } from "@/lib/persistence";
+import { ExhibitRepository, type CaptureArtifactInput } from "@/lib/persistence";
 
 const exhibitTypes: Array<{ value: ExhibitType; label: string }> = [
   { value: "project", label: "Project" },
@@ -45,7 +45,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   const [step, setStep] = useState(1);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ExhibitType | "">("");
-  const [status, setStatus] = useState<"unfinished" | "active">("unfinished");
+  const [status, setStatus] = useState<"unfinished" | "active" | "">("unfinished");
   const [tags, setTags] = useState("");
   const [museumLabel, setMuseumLabel] = useState("");
   const [whyStarted, setWhyStarted] = useState("");
@@ -68,6 +68,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     const nextErrors = [
       ...(title.trim() ? [] : ["Add a title before continuing."]),
       ...(type ? [] : ["Choose an Exhibit type before continuing."]),
+      ...(status ? [] : ["Choose an initial status before continuing."]),
     ];
     setErrors(nextErrors);
     return nextErrors.length === 0;
@@ -128,12 +129,15 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   }
 
   async function saveExhibit() {
-    if (!validateStory() || type === "") return;
+    if (!validateStory() || type === "" || status === "") return;
 
     setIsSaving(true);
     setErrors([]);
     try {
-      const exhibit = await repository.createExhibit({
+      const artifacts: CaptureArtifactInput[] = evidence.map((item) => item.kind === "link"
+        ? { kind: "link", label: item.label, url: item.value }
+        : { kind: "note", label: item.label, note: item.value });
+      const exhibit = await repository.captureExhibit({
         title,
         type,
         status,
@@ -142,14 +146,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         whyStopped: optionalValue(whyStopped),
         whatItTaughtMe: optionalValue(whatItTaughtMe),
         tags: tags.split(","),
-      });
-
-      for (const item of evidence) {
-        const artifact: AddArtifactInput = item.kind === "link"
-          ? { kind: "link", label: item.label, url: item.value }
-          : { kind: "note", label: item.label, note: item.value };
-        await repository.addArtifact(exhibit.id, artifact);
-      }
+      }, artifacts);
 
       onNavigate(`/exhibit?id=${exhibit.id}`);
     } catch {
@@ -216,7 +213,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
             </label>
             <label className="museum-field" htmlFor="exhibit-status">
               <span className="museum-field__label">Initial status <span aria-hidden="true">*</span></span>
-              <select className="museum-input" id="exhibit-status" onChange={(event) => setStatus(event.target.value as "unfinished" | "active")} value={status}>
+              <select className="museum-input" id="exhibit-status" onChange={(event) => setStatus(event.target.value as "unfinished" | "active" | "")} required value={status}>
                 {initialStatuses.map(({ label, value }) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
