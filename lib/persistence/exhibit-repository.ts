@@ -523,6 +523,30 @@ export class ExhibitRepository {
     );
   }
 
+  /** Replaces every persisted collection record in one transaction after validating the full snapshot. */
+  async restoreSnapshot(snapshot: MuseumSnapshot): Promise<void> {
+    const validated = {
+      exhibits: snapshot.exhibits.map((record) => exhibitSchema.parse(record)),
+      artifacts: snapshot.artifacts.map((record) => artifactSchema.parse(record)),
+      history: snapshot.history.map((record) => historyEventSchema.parse(record)),
+    } satisfies MuseumSnapshot;
+
+    await this.#database.transaction(
+      "rw",
+      this.#database.exhibits,
+      this.#database.artifacts,
+      this.#database.history,
+      async () => {
+        await this.#database.history.clear();
+        await this.#database.artifacts.clear();
+        await this.#database.exhibits.clear();
+        await this.#database.exhibits.bulkAdd(validated.exhibits);
+        await this.#database.artifacts.bulkAdd(validated.artifacts);
+        await this.#database.history.bulkAdd(validated.history);
+      },
+    );
+  }
+
   async eraseAll(): Promise<void> {
     await this.#database.transaction(
       "rw",
