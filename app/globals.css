@@ -866,6 +866,218 @@ p {
   min-width: 2.5rem;
 }
 
+.exhibit-detail {
+  display: grid;
+  gap: var(--space-7);
+  max-width: 62rem;
+}
+
+.exhibit-detail--missing {
+  max-width: 42rem;
+}
+
+.exhibit-detail--missing .museum-button {
+  justify-self: start;
+  text-decoration: none;
+}
+
+.exhibit-detail__header,
+.exhibit-detail__story,
+.exhibit-detail__edit,
+.exhibit-detail__artifacts {
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  border: 1px solid var(--border-strong);
+  padding: clamp(var(--space-4), 5vw, var(--space-6));
+}
+
+.exhibit-detail__header {
+  align-items: end;
+  display: flex;
+  gap: var(--space-5);
+  justify-content: space-between;
+  box-shadow: 0.55rem 0.55rem 0 color-mix(in srgb, var(--brass) 24%, transparent);
+}
+
+.exhibit-detail__header h1 {
+  font-size: clamp(3rem, 8vw, 6rem);
+  margin-bottom: var(--space-3);
+}
+
+.exhibit-detail__header p:last-child {
+  font-size: 1.15rem;
+  margin-bottom: 0;
+  max-width: 42rem;
+}
+
+.exhibit-detail__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.exhibit-detail__actions .museum-button {
+  text-decoration: none;
+}
+
+.exhibit-detail__message {
+  background: color-mix(in srgb, var(--brass) 17%, var(--paper));
+  border-left: 3px solid var(--brass);
+  color: var(--charcoal);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.exhibit-detail__story {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: minmax(10rem, 0.55fr) minmax(0, 1.45fr);
+}
+
+.exhibit-detail__story > div:first-child {
+  border-right: 1px solid var(--border);
+}
+
+.exhibit-detail__story ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4) 0 0;
+}
+
+.exhibit-detail__story > div:first-child li {
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: var(--space-2);
+  text-transform: uppercase;
+}
+
+.exhibit-detail__story h2,
+.exhibit-detail__artifacts h2,
+.exhibit-detail__edit h2 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  margin-bottom: var(--space-5);
+}
+
+.exhibit-detail__story dl {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0 0 var(--space-5);
+}
+
+.exhibit-detail__story dl div {
+  border-left: 2px solid var(--brass);
+  padding-left: var(--space-4);
+}
+
+.exhibit-detail__story dt {
+  color: var(--charcoal);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+}
+
+.exhibit-detail__story dd {
+  color: var(--charcoal-muted);
+  margin: 0;
+}
+
+.exhibit-detail__edit {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.exhibit-detail__edit textarea,
+.exhibit-detail__attachment-forms textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.exhibit-detail__artifacts > ul {
+  display: grid;
+  gap: var(--space-4);
+  list-style: none;
+  margin: var(--space-5) 0;
+  padding: 0;
+}
+
+.exhibit-detail__artifact {
+  border: 1px solid var(--border);
+  padding: var(--space-4);
+}
+
+.exhibit-detail__artifact-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.exhibit-detail__artifact-heading h3,
+.exhibit-detail__attachment-forms h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.exhibit-detail__artifact-heading .museum-eyebrow {
+  margin-bottom: var(--space-2);
+}
+
+.exhibit-detail__file-preview {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.exhibit-detail__file-preview img,
+.exhibit-detail__file-preview iframe {
+  background: var(--ivory-deep);
+  border: 1px solid var(--border);
+  max-height: 22rem;
+  max-width: 100%;
+  width: 34rem;
+}
+
+.exhibit-detail__file-preview audio {
+  max-width: 100%;
+  width: 34rem;
+}
+
+.exhibit-detail__file-preview a,
+.exhibit-detail__artifact a:not(.museum-button) {
+  color: var(--rust-deep);
+  text-underline-offset: 0.2em;
+}
+
+.exhibit-detail__attachment-forms {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-top: var(--space-5);
+}
+
+.exhibit-detail__attachment-forms > div {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.exhibit-detail__attachment-forms .museum-button {
+  justify-self: start;
+}
+
 @media (max-width: 64rem) {
   .museum-gallery__controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -925,6 +1137,32 @@ p {
 
   .museum-gallery__cards--list .museum-gallery__card article {
     grid-template-columns: 1fr;
+  }
+
+  .exhibit-detail__header,
+  .exhibit-detail__artifact-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .exhibit-detail__actions .museum-button,
+  .exhibit-detail__attachment-forms .museum-button {
+    width: 100%;
+  }
+
+  .exhibit-detail__story,
+  .exhibit-detail__attachment-forms {
+    grid-template-columns: 1fr;
+  }
+
+  .exhibit-detail__story > div:first-child {
+    border-bottom: 1px solid var(--border);
+    border-right: 0;
+    padding-bottom: var(--space-4);
+  }
+
+  .exhibit-detail__story ul {
+    padding-right: 0;
   }
 
   .exhibit-capture__actions,
