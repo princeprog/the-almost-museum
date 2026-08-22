@@ -646,5 +646,9 @@ describe("ExhibitRepository", () => {
     await repository.eraseAll();
 
     await expect(repository.getSnapshot()).resolves.toEqual({ exhibits: [], artifacts: [], history: [] });
+
+    await repository.eraseAll();
+
+    await expect(repository.getSnapshot()).resolves.toEqual({ exhibits: [], artifacts: [], history: [] });
   });
 });
