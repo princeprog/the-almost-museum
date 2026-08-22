@@ -9,6 +9,7 @@ import {
   exhibitSchema,
   historyEventSchema,
   normalizeId,
+  normalizeIds,
   normalizeTimestamp,
   statusTransitionSchema,
   updateExhibitInputSchema,
@@ -40,6 +41,8 @@ export interface ExhibitRepositoryOptions {
   createId?: () => string;
   now?: () => Date;
 }
+
+export type CreateTransformedExhibitInput = Omit<CreateExhibitInput, "status" | "relatedExhibitIds">;
 
 export interface FileArtifactInput {
   kind: "image" | "pdf" | "audio";
@@ -370,12 +373,21 @@ export class ExhibitRepository {
 
     return this.#database.transaction("rw", this.#database.exhibits, this.#database.history, async () => {
       const current = await this.#requireExhibit(id);
+      let relatedTarget: Exhibit | undefined;
       if (transition.action === "transform") {
-        const target = await this.#database.exhibits.get(transition.relatedExhibitId);
-        if (target === undefined) {
+        if (transition.relatedExhibitId === current.id) {
+          throw new Error("An Exhibit cannot transform into itself");
+        }
+        const storedTarget = await this.#database.exhibits.get(transition.relatedExhibitId);
+        if (storedTarget === undefined) {
           throw new RelatedExhibitNotFoundError(transition.relatedExhibitId);
         }
-        exhibitSchema.parse(target);
+        const target = exhibitSchema.parse(storedTarget);
+        relatedTarget = exhibitSchema.parse({
+          ...target,
+          relatedExhibitIds: normalizeIds([...target.relatedExhibitIds, current.id]),
+          updatedAt: transition.occurredAt,
+        });
       }
 
       const updated = exhibitSchema.parse(applyClosureAction(current, transition));
@@ -393,8 +405,19 @@ export class ExhibitRepository {
         },
       });
 
+      const relatedTargetEvent = relatedTarget === undefined ? undefined : createHistoryEvent({
+        id: this.#createId(),
+        exhibitId: relatedTarget.id,
+        type: "edited",
+        occurredAt: transition.occurredAt,
+        summary: "Linked a related Exhibit.",
+        details: { fields: ["relatedExhibitIds"] },
+      });
+
       await this.#database.exhibits.put(updated);
+      if (relatedTarget !== undefined) await this.#database.exhibits.put(relatedTarget);
       await this.#database.history.add(event);
+      if (relatedTargetEvent !== undefined) await this.#database.history.add(relatedTargetEvent);
       return exhibitSchema.parse(updated);
     });
   }
@@ -408,6 +431,64 @@ export class ExhibitRepository {
       action: "transform",
       occurredAt,
       relatedExhibitId,
+    });
+  }
+
+  async transformExhibitToNew(
+    exhibitId: string,
+    input: CreateTransformedExhibitInput,
+    occurredAt: string | Date,
+  ): Promise<Exhibit> {
+    const id = normalizeId(exhibitId);
+    const normalizedOccurredAt = normalizeTimestamp(occurredAt);
+
+    return this.#database.transaction("rw", this.#database.exhibits, this.#database.history, async () => {
+      const current = await this.#requireExhibit(id);
+      const targetInput = createExhibitInputSchema.parse({
+        ...input,
+        status: "unfinished",
+        relatedExhibitIds: [current.id],
+      });
+      const target = exhibitSchema.parse({
+        ...targetInput,
+        id: this.#createId(),
+        createdAt: normalizedOccurredAt,
+        updatedAt: normalizedOccurredAt,
+        closedAt: null,
+      });
+      const updated = exhibitSchema.parse(applyClosureAction(current, {
+        action: "transform",
+        occurredAt: normalizedOccurredAt,
+        relatedExhibitId: target.id,
+      }));
+      const targetCreatedEvent = createHistoryEvent({
+        id: this.#createId(),
+        exhibitId: target.id,
+        type: "created",
+        occurredAt: normalizedOccurredAt,
+        summary: "Created Exhibit.",
+        details: { status: target.status, type: target.type },
+      });
+      const sourceEvent = createHistoryEvent({
+        id: this.#createId(),
+        exhibitId: current.id,
+        type: "transformed",
+        occurredAt: normalizedOccurredAt,
+        summary: "Transformed into a related Exhibit.",
+        details: { action: "transform", from: current.status, relatedExhibitId: target.id, to: updated.status },
+      });
+      const targetLinkedEvent = createHistoryEvent({
+        id: this.#createId(),
+        exhibitId: target.id,
+        type: "edited",
+        occurredAt: normalizedOccurredAt,
+        summary: "Linked a related Exhibit.",
+        details: { fields: ["relatedExhibitIds"] },
+      });
+
+      await this.#database.exhibits.bulkPut([updated, target]);
+      await this.#database.history.bulkAdd([targetCreatedEvent, sourceEvent, targetLinkedEvent]);
+      return exhibitSchema.parse(updated);
     });
   }
 
