@@ -26,3 +26,9 @@
 ## Scope
 
 - No ledger edits, pushes, merges, rebases, deployments, or goal changes were made.
+
+## Fix round 1
+
+- A transformed history record can include both its prior/next status and its related Exhibit ID. The timeline now renders both details instead of dropping the status transition when a related Exhibit is present.
+- Extended the focused timeline coverage for transformed status detail, artifact removal, and the `revive`, `complete`, and `release` status summaries.
+- TDD evidence: the extended timeline test failed before the formatter change because `From active to transformed.` was absent; it passes after the formatter returns and renders both details.

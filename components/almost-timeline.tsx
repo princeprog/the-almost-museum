@@ -73,13 +73,14 @@ function describeEvent(event: HistoryEvent): string {
   }
 }
 
-function describeDetail(event: HistoryEvent): string | undefined {
+function describeDetails(event: HistoryEvent): string[] {
   const from = readString(event.details, "from");
   const to = readString(event.details, "to");
   const relatedExhibitId = readString(event.details, "relatedExhibitId");
-  if (relatedExhibitId !== undefined) return `Related Exhibit: ${relatedExhibitId}.`;
-  if (from !== undefined && to !== undefined) return `From ${from} to ${to}.`;
-  return undefined;
+  const details: string[] = [];
+  if (from !== undefined && to !== undefined) details.push(`From ${from} to ${to}.`);
+  if (relatedExhibitId !== undefined) details.push(`Related Exhibit: ${relatedExhibitId}.`);
+  return details;
 }
 
 function formatOccurredAt(occurredAt: string): string {
@@ -105,8 +106,8 @@ export function AlmostTimeline({ history = [], isLoading = false, error = false 
       <header><p className="museum-eyebrow">Record</p><h2 id="timeline-title">The Almost timeline</h2><p>Every change stays part of the record.</p></header>
       <ol>
         {chronologicalHistory.map((event) => {
-          const detail = describeDetail(event);
-          return <li key={event.id}><time dateTime={event.occurredAt}>{formatOccurredAt(event.occurredAt)}</time><p>{describeEvent(event)}</p>{detail !== undefined ? <p className="almost-timeline__detail">{detail}</p> : null}</li>;
+          const details = describeDetails(event);
+          return <li key={event.id}><time dateTime={event.occurredAt}>{formatOccurredAt(event.occurredAt)}</time><p>{describeEvent(event)}</p>{details.map((detail) => <p className="almost-timeline__detail" key={detail}>{detail}</p>)}</li>;
         })}
       </ol>
     </section>
