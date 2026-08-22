@@ -53,6 +53,10 @@ function browserNavigate(href: string): void {
   window.location.assign(href);
 }
 
+function pendingFileBytes(evidence: EvidenceDraft[]): number {
+  return evidence.reduce((total, item) => total + ("previewUrl" in item ? item.byteSize : 0), 0);
+}
+
 /** Client-side, local-first capture flow for a single Exhibit and its optional written evidence. */
 export function ExhibitCapture({ repository: suppliedRepository, onNavigate = browserNavigate }: Readonly<ExhibitCaptureProps>) {
   const [repository] = useState(() => suppliedRepository ?? new ExhibitRepository());
@@ -81,6 +85,27 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     previewUrls.current.clear();
     if (suppliedRepository === undefined) repository.close();
   }, [repository, suppliedRepository]);
+
+  useEffect(() => {
+    const pendingBytes = pendingFileBytes(evidence);
+    if (pendingBytes === 0) {
+      setQuotaWarning(undefined);
+      return;
+    }
+
+    let isCurrent = true;
+    void navigator.storage?.estimate?.()
+      .then((estimate) => {
+        if (isCurrent) setQuotaWarning(getStorageQuotaWarning(estimate ?? {}, pendingBytes));
+      })
+      .catch(() => {
+        if (isCurrent) setQuotaWarning(undefined);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [evidence]);
 
   function validateIdentity(): boolean {
     const nextErrors = [
@@ -152,15 +177,6 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     previewUrls.current.clear();
   }
 
-  async function checkStorageQuota(fileSize: number) {
-    try {
-      const estimate = await navigator.storage?.estimate?.();
-      setQuotaWarning(getStorageQuotaWarning(estimate ?? {}, fileSize));
-    } catch {
-      setQuotaWarning(undefined);
-    }
-  }
-
   function addFile(file: File) {
     const validation = validateArtifactFile(file);
     if (!validation.valid) {
@@ -172,7 +188,6 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     previewUrls.current.add(previewUrl);
     setEvidence((current) => [...current, { ...validation.artifact, previewUrl }]);
     setErrors([]);
-    void checkStorageQuota(validation.artifact.byteSize);
   }
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
