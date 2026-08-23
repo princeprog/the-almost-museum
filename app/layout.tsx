@@ -3,6 +3,7 @@ import { Geist_Mono, Inter, Newsreader } from "next/font/google";
 import { MuseumShell } from "@/components/museum-shell";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import "./globals.css";
+import "./landing.css";
 
 const newsreader = Newsreader({
   display: "swap",

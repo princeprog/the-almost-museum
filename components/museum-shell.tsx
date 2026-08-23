@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GalleryVerticalEnd } from "lucide-react";
 import type { ReactNode } from "react";
 
 const navigationItems = [
@@ -17,8 +18,8 @@ export function MuseumShell({ children }: Readonly<{ children: ReactNode }>) {
         </a>
         <header className="site-header">
           <Link className="wordmark" href="/" aria-label="Almost Museum home">
-            <span aria-hidden="true">Almost</span>
-            <span className="wordmark-label">Museum</span>
+            <GalleryVerticalEnd aria-hidden="true" className="wordmark-icon" />
+            <span aria-hidden="true">Almost Museum</span>
           </Link>
           <nav className="primary-navigation" aria-label="Primary navigation">
             {navigationItems.map((item) => (

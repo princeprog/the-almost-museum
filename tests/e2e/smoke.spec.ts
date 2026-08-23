@@ -9,7 +9,7 @@ test("serves the exported museum landing page", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "Give unfinished work a place to live." })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Enter the Museum" })).toHaveAttribute("href", "/museum");
+  await expect(page.getByRole("link", { name: "Enter the Museum" }).first()).toHaveAttribute("href", "/museum");
 });
 
 test("rejects malformed paths without interrupting later clean routes", async ({ page, request }) => {
@@ -24,9 +24,9 @@ test("keeps the landing experience contained and stacked on a narrow viewport", 
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
 
-  const frame = page.locator(".landing-page__frame");
-  const enterMuseum = page.getByRole("link", { name: "Enter the Museum" });
-  const note = page.locator(".landing-page__note");
+  const frame = page.locator("main.landing-page");
+  const enterMuseum = page.getByRole("link", { name: "Enter the Museum" }).first();
+  const note = page.locator(".marketing-hero__privacy");
 
   await expect(frame).toBeVisible();
   await expect(enterMuseum).toBeVisible();
@@ -48,7 +48,7 @@ test("keeps the landing experience contained and stacked on a narrow viewport", 
   expect(frameBox!.x).toBeGreaterThanOrEqual(0);
   expect(frameBox!.x + frameBox!.width).toBeLessThanOrEqual(pageWidth.viewportWidth);
   expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(pageWidth.viewportWidth);
-  expect(noteBox!.y).toBeGreaterThan(frameBox!.y + frameBox!.height);
+  expect(noteBox!.y).toBeGreaterThan(actionBox!.y + actionBox!.height);
 });
 
 test("captures an Exhibit through the exported clean routes", async ({ page }) => {

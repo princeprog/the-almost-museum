@@ -12,7 +12,7 @@ describe("Almost landing page", () => {
     ).toBeVisible();
     expect(
       screen.getByText(
-        "Almost is a private museum for unfinished ideas, projects, and experiments.",
+        "Almost Museum is a private, local-first digital museum for unfinished ideas, abandoned projects, experiments, drafts, and things that almost existed.",
       ),
     ).toBeVisible();
   });
@@ -20,17 +20,23 @@ describe("Almost landing page", () => {
   it("provides a named route into the museum", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("link", { name: "Enter the Museum" })).toHaveAttribute("href", "/museum");
+    expect(screen.getAllByRole("link", { name: "Enter the Museum" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Enter the Museum" })[0]).toHaveAttribute("href", "/museum");
   });
 
-  it("keeps the introduction and supporting note in a responsive landing structure", () => {
+  it("presents the complete museum story in a responsive landing structure", () => {
     const { container } = render(<HomePage />);
 
     const main = screen.getByRole("main");
     expect(main).toHaveClass("landing-page");
-    expect(main.querySelector(".landing-page__hero")).toBeInTheDocument();
-    expect(main.querySelector(".landing-page__note")).toBeInTheDocument();
-    expect(container.querySelector(".landing-page__frame")).toBeInTheDocument();
-    expect(screen.getByText("Collection no. 01", { exact: false })).toBeVisible();
+    expect(main.querySelector(".marketing-hero")).toBeInTheDocument();
+    expect(main.querySelector(".benefit-strip")).toBeInTheDocument();
+    expect(main.querySelector(".exhibit-showcase")).toBeInTheDocument();
+    expect(main.querySelector(".how-it-works")).toBeInTheDocument();
+    expect(main.querySelector(".value-strip")).toBeInTheDocument();
+    expect(container.querySelector(".closing-cta")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your museum. Your way." })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "A calm space for unfinished things." })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Save the work worth remembering." })).toBeVisible();
   });
 });
