@@ -1,4 +1,3 @@
-import { defaultCache } from "@serwist/next/worker";
 import { Serwist, type PrecacheEntry, type SerwistGlobalConfig } from "serwist";
 
 declare global {
@@ -14,8 +13,11 @@ const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   precacheOptions: {
     cleanURLs: true,
+    navigateFallback: "/offline",
   },
-  runtimeCaching: defaultCache,
+  // Every exported route, script, stylesheet, and bundled font is precached.
+  // Avoid runtime font providers so an offline revisit never depends on Google Fonts.
+  runtimeCaching: [],
   skipWaiting: true,
 });
 

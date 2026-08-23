@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -46,5 +47,28 @@ describe("NativeSelect field", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Choose an available room.",
     );
+  });
+
+  it("keeps native options available to keyboard and assistive-technology selection", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Field>
+        <FieldLabel htmlFor="room-picker">Museum room</FieldLabel>
+        <NativeSelect defaultValue="unfinished" id="room-picker">
+          <NativeSelectOption value="unfinished">Unfinished</NativeSelectOption>
+          <NativeSelectOption value="released">Released</NativeSelectOption>
+        </NativeSelect>
+      </Field>,
+    );
+
+    const select = screen.getByRole("combobox", { name: "Museum room" });
+    expect(select).toHaveAttribute("data-slot", "native-select");
+    expect(screen.getByRole("option", { name: "Unfinished" })).toHaveProperty("selected", true);
+
+    await user.selectOptions(select, "released");
+
+    expect(select).toHaveValue("released");
+    expect(screen.getByRole("option", { name: "Released" })).toHaveProperty("selected", true);
   });
 });
