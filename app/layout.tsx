@@ -30,7 +30,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${newsreader.variable} ${inter.variable} ${geistMono.variable}`}>
+    <html
+      className={`${newsreader.variable} ${inter.variable} ${geistMono.variable}`}
+      data-scroll-behavior="smooth"
+      lang="en"
+    >
       <body>
         <MuseumShell>{children}</MuseumShell>
         <ServiceWorkerRegistration />

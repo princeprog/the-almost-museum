@@ -4,11 +4,11 @@ import { describe, expect, it } from "vitest";
 import HomePage from "../../app/page";
 
 describe("Almost landing page", () => {
-  it("introduces a private museum for unfinished work without framing it as a failure", () => {
+  it("introduces a private archive for unfinished work", () => {
     render(<HomePage />);
 
     expect(
-      screen.getByRole("heading", { name: "Not everything unfinished is a failure." }),
+      screen.getByRole("heading", { name: "Give unfinished work a place to live." }),
     ).toBeVisible();
     expect(
       screen.getByText(
@@ -31,5 +31,6 @@ describe("Almost landing page", () => {
     expect(main.querySelector(".landing-page__hero")).toBeInTheDocument();
     expect(main.querySelector(".landing-page__note")).toBeInTheDocument();
     expect(container.querySelector(".landing-page__frame")).toBeInTheDocument();
+    expect(screen.getByText("Collection no. 01", { exact: false })).toBeVisible();
   });
 });

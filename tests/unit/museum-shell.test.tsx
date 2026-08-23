@@ -35,6 +35,7 @@ describe("museum shell", () => {
     const museumLink = screen.getByRole("link", { name: "Museum" });
 
     expect(navigation).toBeVisible();
+    expect(museumLink).toHaveClass("navigation-link--featured");
     expect(screen.getAllByRole("main")).toHaveLength(1);
     expect(document.querySelector(".museum-paper-texture")).toBeInTheDocument();
 

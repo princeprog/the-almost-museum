@@ -8,7 +8,7 @@ async function openHydratedCapture(page: import("@playwright/test").Page): Promi
 test("serves the exported museum landing page", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Not everything unfinished is a failure." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Give unfinished work a place to live." })).toBeVisible();
   await expect(page.getByRole("link", { name: "Enter the Museum" })).toHaveAttribute("href", "/museum");
 });
 
@@ -31,6 +31,8 @@ test("keeps the landing experience contained and stacked on a narrow viewport", 
   await expect(frame).toBeVisible();
   await expect(enterMuseum).toBeVisible();
   await expect(note).toBeVisible();
+  await expect(page.getByRole("link", { name: "New exhibit" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
 
   const [frameBox, actionBox, noteBox, pageWidth] = await Promise.all([
     frame.boundingBox(),

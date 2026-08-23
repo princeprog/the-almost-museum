@@ -22,8 +22,12 @@ export function MuseumShell({ children }: Readonly<{ children: ReactNode }>) {
           </Link>
           <nav className="primary-navigation" aria-label="Primary navigation">
             {navigationItems.map((item) => (
-              <Link className="navigation-link" href={item.href} key={item.href}>
-                {item.label}
+              <Link
+                className={`navigation-link${item.href === "/museum" ? " navigation-link--featured" : ""}`}
+                href={item.href}
+                key={item.href}
+              >
+                {item.label}{item.href === "/museum" ? <span aria-hidden="true">↗</span> : null}
               </Link>
             ))}
           </nav>
