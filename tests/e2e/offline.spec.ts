@@ -1,5 +1,24 @@
 import { expect, test } from "@playwright/test";
 
+test("preserves online query-addressed Exhibit routes after service-worker activation", async ({ page }) => {
+  await page.goto("/exhibit/new");
+  await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration("/"))?.active?.scriptURL.endsWith("/sw.js") ?? false)).toBe(true);
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.endsWith("/sw.js") ?? false)).toBe(true);
+  await expect(page.locator("main.exhibit-capture")).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+
+  await page.getByRole("textbox", { name: "Working title" }).fill("Worker query route study");
+  await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
+  await page.getByRole("button", { name: "Continue to evidence" }).click();
+  await page.getByRole("button", { name: "Continue to story" }).click();
+  await page.getByRole("textbox", { name: "Museum label" }).fill("A query-addressed record behind the active worker");
+  await page.getByRole("button", { name: "Save Exhibit" }).click();
+
+  await expect(page).toHaveURL(/\/exhibit\?id=/);
+  await expect(page.getByRole("heading", { name: "Worker query route study" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You can still visit the Museum." })).toHaveCount(0);
+});
+
 test("ships a manifest, generated icons, offline fallback, and a production service worker", async ({ context, page, request }) => {
   const manifestResponse = await request.get("/manifest.webmanifest");
   expect(manifestResponse.ok()).toBe(true);

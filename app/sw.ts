@@ -13,6 +13,7 @@ const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   precacheOptions: {
     cleanURLs: true,
+    ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^id$/],
     navigateFallback: "/offline",
   },
   // Every exported route, script, stylesheet, and bundled font is precached.
