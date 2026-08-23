@@ -55,6 +55,11 @@ const closureConfirmLabels: Record<Exclude<ClosureAction, "transform">, string> 
   release: "Release Exhibit",
 };
 
+type Feedback = {
+  intent: "alert" | "status";
+  text: string;
+};
+
 export interface ExhibitDetailProps {
   repository?: ExhibitRepository;
   /** Intended for route-level integration tests; browser navigation supplies this by default. */
@@ -137,8 +142,10 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   const [isTimelineLoading, setIsTimelineLoading] = useState(exhibitId !== undefined);
   const [isTimelineUnavailable, setIsTimelineUnavailable] = useState(false);
   const [isMissing, setIsMissing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
-  const [message, setMessage] = useState<string>();
+  const [message, setMessage] = useState<Feedback>();
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ExhibitType>("project");
   const [museumLabel, setMuseumLabel] = useState("");
@@ -170,12 +177,17 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     setTags(nextExhibit.tags.join(", "));
   }
 
+  function reportMessage(text: string, intent: Feedback["intent"] = "status") {
+    setMessage({ intent, text });
+  }
+
   function clearDetailState() {
     setExhibit(undefined);
     setArtifacts([]);
     setHistory([]);
     setIsTimelineLoading(false);
     setIsTimelineUnavailable(false);
+    setLoadError(false);
     setIsEditing(false);
     setMessage(undefined);
     setTitle("");
@@ -226,6 +238,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setExhibit(record);
       setArtifacts(records);
       setFormValues(record);
+      setLoadError(false);
       try {
         const historyRecords = await repository.getHistory(record.id);
         if (!isCurrentRequest()) return;
@@ -239,7 +252,8 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     } catch {
       if (!isCurrentRequest()) return;
       clearDetailState();
-      setIsMissing(true);
+      setLoadError(true);
+      setIsMissing(false);
     } finally {
       if (isCurrentRequest()) setIsLoading(false);
     }
@@ -264,7 +278,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     };
   // The repository is intentionally stable for a mounted detail view.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exhibitId, repository]);
+  }, [exhibitId, loadAttempt, repository]);
 
   async function refreshTimeline(id: string) {
     const version = requestVersion.current;
@@ -303,17 +317,17 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setExhibit(updated);
       setFormValues(updated);
       setIsEditing(false);
-      setMessage("Exhibit details saved.");
+      reportMessage("Exhibit details saved.");
       void refreshTimeline(updated.id);
     } catch {
-      setMessage("Your changes are still here. Please check the required fields and try again.");
+      reportMessage("Your changes are still here. Please check the required fields and try again.", "alert");
     }
   }
 
   async function addLink() {
     if (exhibit === undefined) return;
     if (!linkLabel.trim() || !linkAddress.trim()) {
-      setMessage("Add a label and a complete link address before saving the link.");
+      reportMessage("Add a label and a complete link address before saving the link.", "alert");
       return;
     }
     try {
@@ -322,17 +336,17 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setArtifacts((current) => [...current, artifact]);
       setLinkLabel("");
       setLinkAddress("");
-      setMessage("Link added to this Exhibit.");
+      reportMessage("Link added to this Exhibit.");
       void refreshTimeline(exhibit.id);
     } catch {
-      setMessage("Use a complete link address, including https://.");
+      reportMessage("Use a complete link address, including https://.", "alert");
     }
   }
 
   async function addNote() {
     if (exhibit === undefined) return;
     if (!noteLabel.trim() || !note.trim()) {
-      setMessage("Add a label and text before saving the note.");
+      reportMessage("Add a label and text before saving the note.", "alert");
       return;
     }
     try {
@@ -340,10 +354,10 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setArtifacts((current) => [...current, artifact]);
       setNoteLabel("");
       setNote("");
-      setMessage("Note added to this Exhibit.");
+      reportMessage("Note added to this Exhibit.");
       void refreshTimeline(exhibit.id);
     } catch {
-      setMessage("Your note is still here. Please try again.");
+      reportMessage("Your note is still here. Please try again.", "alert");
     }
   }
 
@@ -354,7 +368,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     if (file === null || file === undefined) return;
     const validation = validateArtifactFile(file);
     if (!validation.valid) {
-      setMessage(validation.message);
+      reportMessage(validation.message, "alert");
       return;
     }
     try {
@@ -363,10 +377,10 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
         label: validation.artifact.fileName,
       });
       setArtifacts((current) => [...current, artifact]);
-      setMessage("Local file added to this Exhibit.");
+      reportMessage("Local file added to this Exhibit.");
       void refreshTimeline(exhibit.id);
     } catch {
-      setMessage("Your file was not added. Please try again.");
+      reportMessage("Your file was not added. Please try again.", "alert");
     }
   }
 
@@ -374,10 +388,10 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     try {
       await repository.removeArtifact(artifact.id);
       setArtifacts((current) => current.filter((item) => item.id !== artifact.id));
-      setMessage("Attachment removed from this Exhibit.");
+      reportMessage("Attachment removed from this Exhibit.");
       void refreshTimeline(artifact.exhibitId);
     } catch {
-      setMessage("That attachment could not be removed. Please try again.");
+      reportMessage("That attachment could not be removed. Please try again.", "alert");
     }
   }
 
@@ -393,7 +407,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setTransformCandidates(candidates.filter((candidate) => candidate.id !== exhibit.id));
     } catch {
       setTransformCandidates([]);
-      setMessage("The related Exhibit list is unavailable. You can still create a new Exhibit.");
+      reportMessage("The related Exhibit list is unavailable. You can still create a new Exhibit.", "alert");
     }
   }
 
@@ -406,16 +420,16 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     if (exhibit === undefined || closureAction === undefined) return;
     if (!canApplyClosureAction(exhibit, closureAction)) {
       setClosureAction(undefined);
-      setMessage("This ceremony is no longer available for the current Exhibit status.");
+      reportMessage("This ceremony is no longer available for the current Exhibit status.", "alert");
       return;
     }
     if (closureAction === "release" && !releaseAcknowledged) return;
     if (closureAction === "transform" && transformMode === "existing" && !relatedExhibitId) {
-      setMessage("Choose an existing Exhibit, or create a new one for this transformation.");
+      reportMessage("Choose an existing Exhibit, or create a new one for this transformation.", "alert");
       return;
     }
     if (closureAction === "transform" && transformMode === "new" && (!newExhibitTitle.trim() || !newExhibitLabel.trim())) {
-      setMessage("Give the new Exhibit a title and museum label before transforming.");
+      reportMessage("Give the new Exhibit a title and museum label before transforming.", "alert");
       return;
     }
 
@@ -439,10 +453,10 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       setExhibit(updated);
       setFormValues(updated);
       setClosureAction(undefined);
-      setMessage(closureAction === "transform" ? "This Exhibit has been transformed and linked." : `${closureLabels[closureAction]} ceremony recorded.`);
+      reportMessage(closureAction === "transform" ? "This Exhibit has been transformed and linked." : `${closureLabels[closureAction]} ceremony recorded.`);
       void refreshTimeline(updated.id);
     } catch {
-      setMessage("The ceremony could not be recorded. Your Exhibit has not been changed.");
+      reportMessage("The ceremony could not be recorded. Your Exhibit has not been changed.", "alert");
     } finally {
       setIsTransitioning(false);
     }
@@ -450,6 +464,19 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
 
   if (exhibitId === undefined) {
     return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Exhibit</p><h1>Choose an Exhibit</h1><p>Open an Exhibit from the Museum to visit its story and artifacts.</p><Link className="museum-button museum-button--secondary" href="/museum">Return to the Museum</Link></main>;
+  }
+  if (loadError) {
+    return (
+      <main className="exhibit-detail exhibit-detail--missing">
+        <p className="museum-eyebrow">Connection to your collection interrupted</p>
+        <h1>This Exhibit could not be opened.</h1>
+        <p role="alert">This Exhibit could not be opened. Your local records have not been changed. Try opening this Exhibit again when the browser is ready.</p>
+        <div className="exhibit-detail__actions">
+          <button className="museum-button museum-button--primary" onClick={() => setLoadAttempt((current) => current + 1)} type="button">Try opening this Exhibit again</button>
+          <Link className="museum-button museum-button--secondary" href="/museum">Return to the Museum</Link>
+        </div>
+      </main>
+    );
   }
   if (isLoading || (!isMissing && exhibit?.id !== exhibitId)) return <main className="exhibit-detail"><p role="status">Opening this Exhibit…</p></main>;
   if (isMissing || exhibit === undefined) {
@@ -474,7 +501,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
         </div>
       </header>
 
-      {message !== undefined ? <p className="exhibit-detail__message" role="status">{message}</p> : null}
+      {message !== undefined ? <p className="exhibit-detail__message" role={message.intent}>{message.text}</p> : null}
 
       {isEditing ? (
         <form className="exhibit-detail__edit" noValidate onSubmit={saveChanges}>

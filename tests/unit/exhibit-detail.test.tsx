@@ -1,7 +1,7 @@
 import Dexie from "dexie";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExhibitDetail } from "@/components/exhibit-detail";
 import type { Exhibit } from "@/lib/domain";
@@ -64,6 +64,36 @@ describe("ExhibitDetail", () => {
     render(<ExhibitDetail repository={createRepository("almost-museum-detail-missing-record")} search="?id=missing" />);
 
     expect(await screen.findByRole("heading", { name: "That Exhibit is not here" })).toBeVisible();
+  });
+
+  it("announces attachment validation errors as errors instead of passive status", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-attachment-validation");
+    const exhibit = await createExhibit(repository);
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+    await user.click(screen.getByRole("button", { name: "Add link" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Add a label and a complete link address before saving the link.");
+  });
+
+  it("distinguishes a loading failure from a missing Exhibit and retries without changing the record", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-retry");
+    const exhibit = await createExhibit(repository);
+    const getExhibit = repository.getExhibit.bind(repository);
+    vi.spyOn(repository, "getExhibit")
+      .mockRejectedValueOnce(new Error("IndexedDB temporarily unavailable"))
+      .mockImplementation(getExhibit);
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This Exhibit could not be opened.");
+    expect(screen.queryByRole("heading", { name: "That Exhibit is not here" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try opening this Exhibit again" }));
+
+    expect(await screen.findByRole("heading", { name: "Harbor Queue" })).toBeVisible();
   });
 
   it("refreshes the query Exhibit after same-page history navigation", async () => {

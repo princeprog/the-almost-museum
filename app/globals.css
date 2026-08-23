@@ -6,7 +6,7 @@
   --paper: #faf7ef;
   --charcoal: #292924;
   --charcoal-muted: #5f5d56;
-  --rust: #a65439;
+  --rust: #8a3f2a;
   --rust-deep: #793725;
   --brass: #a37d3c;
   --brass-light: #d1b475;
@@ -1440,8 +1440,33 @@ p {
   }
 
   .exhibit-capture__actions .museum-button,
-  .exhibit-capture__dialog-actions .museum-button {
+  .exhibit-capture__dialog-actions .museum-button,
+  .archive-privacy-settings__dialog-actions .museum-button,
+  .collection-backups__dialog-actions .museum-button {
     width: 100%;
+  }
+
+  .archive-privacy-settings__dialog-actions,
+  .collection-backups__dialog-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .service-worker-update {
+    align-items: stretch;
+    flex-direction: column;
+    left: var(--space-4);
+    max-width: none;
+  }
+
+  .museum-dialog {
+    padding: var(--space-4);
+  }
+
+  .exhibit-capture__evidence-list strong,
+  .exhibit-detail__artifact h3,
+  .museum-gallery__card h2 {
+    overflow-wrap: anywhere;
   }
 }
 

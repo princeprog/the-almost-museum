@@ -79,12 +79,17 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const previewUrls = useRef(new Set<string>());
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => {
     previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
     previewUrls.current.clear();
     if (suppliedRepository === undefined) repository.close();
   }, [repository, suppliedRepository]);
+
+  useEffect(() => {
+    if (errors.length > 0) errorSummaryRef.current?.focus();
+  }, [errors]);
 
   useEffect(() => {
     const pendingBytes = pendingFileBytes(evidence);
@@ -277,7 +282,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
 
       <form className="exhibit-capture__step-panel" noValidate onSubmit={handleSubmit}>
         {errors.length > 0 ? (
-          <div aria-live="polite" className="exhibit-capture__errors" role="alert">
+          <div aria-live="assertive" className="exhibit-capture__errors" ref={errorSummaryRef} role="alert" tabIndex={-1}>
             {errors.map((error) => <p key={error}>{error}</p>)}
           </div>
         ) : null}

@@ -109,6 +109,8 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
   const [filters, setFilters] = useState<GalleryFilters>(defaultFilters);
   const [view, setView] = useState<GalleryView>("grid");
   const [preferencesReady, setPreferencesReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     const saved = readPreferences();
@@ -122,19 +124,28 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
   useEffect(() => {
     if (initialExhibits !== undefined) {
       setExhibits(initialExhibits);
+      setLoadError(false);
       return;
     }
 
     let isCurrent = true;
-    void repository.listExhibits().then((records) => {
-      if (isCurrent) setExhibits(records);
-    });
+    void repository.listExhibits()
+      .then((records) => {
+        if (!isCurrent) return;
+        setExhibits(records);
+        setLoadError(false);
+      })
+      .catch(() => {
+        if (!isCurrent) return;
+        setExhibits(null);
+        setLoadError(true);
+      });
 
     return () => {
       isCurrent = false;
       if (suppliedRepository === undefined) repository.close();
     };
-  }, [initialExhibits, repository, suppliedRepository]);
+  }, [initialExhibits, loadAttempt, repository, suppliedRepository]);
 
   useEffect(() => {
     if (!preferencesReady || typeof window === "undefined") return;
@@ -152,6 +163,17 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
   );
   const roomLabel = roomOptions.find((option) => option.value === filters.room)?.label ?? "Lobby";
   const resultLabel = `${visibleExhibits.length} ${visibleExhibits.length === 1 ? "exhibit" : "exhibits"} in ${roomLabel}`;
+
+  if (loadError) {
+    return (
+      <section aria-labelledby="gallery-recovery-title" className="museum-gallery__empty">
+        <p className="museum-eyebrow">Collection unavailable</p>
+        <h1 id="gallery-recovery-title">Your collection could not be opened.</h1>
+        <p role="alert">Your collection could not be opened. Your local records have not been changed. Try again, or return after this browser is ready.</p>
+        <button className="museum-button museum-button--secondary" onClick={() => setLoadAttempt((current) => current + 1)} type="button">Try opening collection again</button>
+      </section>
+    );
+  }
 
   if (exhibits === null) return <p role="status">Opening your private collection…</p>;
 
