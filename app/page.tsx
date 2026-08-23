@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+
 export default function HomePage() {
   return (
     <main className="landing-page">
@@ -12,9 +14,9 @@ export default function HomePage() {
             Almost is a private museum for unfinished ideas, projects, and experiments.
           </p>
         </div>
-        <Link className="museum-button museum-button--primary landing-page__enter" href="/museum">
-          Enter the Museum <span aria-hidden="true">→</span>
-        </Link>
+        <Button asChild className="landing-page__enter">
+          <Link href="/museum">Enter the Museum <span aria-hidden="true">→</span></Link>
+        </Button>
       </section>
 
       <section className="landing-page__note" aria-labelledby="landing-note-title">

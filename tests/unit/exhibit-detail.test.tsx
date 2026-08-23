@@ -53,6 +53,28 @@ afterEach(async () => {
 });
 
 describe("ExhibitDetail", () => {
+  it("uses field and action primitives while retaining native closure and file controls", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-primitives");
+    const exhibit = await createExhibit(repository);
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+
+    await user.click(screen.getByRole("button", { name: "Edit Exhibit" }));
+    expect(screen.getByRole("textbox", { name: "Working title" })).toHaveAttribute("data-slot", "input");
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveAttribute("data-slot", "native-select");
+    expect(screen.getByRole("textbox", { name: "Why it started" })).toHaveAttribute("data-slot", "textarea");
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveAttribute("data-slot", "button");
+
+    await user.click(screen.getByRole("button", { name: "Cancel editing" }));
+    expect(screen.getByLabelText("Image, PDF, or audio")).not.toHaveAttribute("data-slot");
+
+    await user.click(screen.getByRole("button", { name: "Transform" }));
+    expect(screen.getByRole("radio", { name: "Create a link to an existing Exhibit" })).not.toHaveAttribute("data-slot");
+    expect(screen.getByRole("combobox", { name: "Existing Exhibit" })).toHaveAttribute("data-slot", "native-select");
+  });
+
   it("explains when the query does not name an Exhibit", async () => {
     render(<ExhibitDetail repository={createRepository("almost-museum-detail-missing-query")} search="" />);
 

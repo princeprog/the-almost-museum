@@ -53,6 +53,21 @@ beforeEach(() => {
 });
 
 describe("ExhibitCapture", () => {
+  it("uses field primitives while retaining the native artifact file picker", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-primitives");
+    const { container } = render(<ExhibitCapture repository={repository} />);
+
+    expect(container.querySelectorAll('[data-slot="field"]')).not.toHaveLength(0);
+    expect(screen.getByRole("textbox", { name: "Working title" })).toHaveAttribute("data-slot", "input");
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveAttribute("data-slot", "native-select");
+
+    await completeIdentity(user);
+
+    expect(screen.getByRole("textbox", { name: "Note" })).toHaveAttribute("data-slot", "textarea");
+    expect(screen.getByLabelText(/Choose an image, PDF, or audio file/)).not.toHaveAttribute("data-slot");
+  });
+
   it("marks the capture form ready after client hydration", async () => {
     const repository = createRepository("almost-museum-capture-hydration");
 

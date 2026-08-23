@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   registerMuseumServiceWorker,
   shouldRegisterMuseumServiceWorker,
@@ -22,9 +23,9 @@ export function ServiceWorkerRegistration() {
   return (
     <aside aria-live="polite" className="service-worker-update" role="status">
       <p>A new version of Almost Museum is ready.</p>
-      <button className="museum-button museum-button--secondary" onClick={() => window.location.reload()} type="button">
+      <Button onClick={() => window.location.reload()} variant="secondary">
         Refresh to update
-      </button>
+      </Button>
     </aside>
   );
 }

@@ -18,9 +18,9 @@ export function EmptyCollectionState({ onInstallDemo }: Readonly<EmptyCollection
         Start with something unfinished, or install a single example to see how an Exhibit can hold its story.
       </p>
       <div className="empty-collection-state__actions">
-        <Link className="museum-button museum-button--primary" href="/exhibit/new">
-          Create Exhibit
-        </Link>
+        <Button asChild>
+          <Link href="/exhibit/new">Create Exhibit</Link>
+        </Button>
         <Button aria-describedby="harbor-queue-demo-description" onClick={onInstallDemo} variant="secondary">
           Install Harbor Queue demo
         </Button>

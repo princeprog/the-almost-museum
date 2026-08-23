@@ -9,6 +9,10 @@ import { validateArtifactFile, type ValidatedFileArtifact } from "@/lib/artifact
 import { getStorageQuotaWarning } from "@/lib/artifacts/storage-quota";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import type { ExhibitStatus, ExhibitType } from "@/lib/domain";
 import {
   exhibitCaptureFormSchema,
@@ -313,29 +317,29 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         {step === 1 ? (
           <fieldset>
             <legend>Identity</legend>
-            <div className="museum-field">
-              <label className="museum-field__label" htmlFor="exhibit-title">Working title <span aria-hidden="true">*</span></label>
-              <input aria-describedby="exhibit-title-hint" autoFocus className="museum-input" id="exhibit-title" required {...register("title")} />
-              <span className="museum-field__hint" id="exhibit-title-hint">A name can be tentative. It only needs to help you recognize this work.</span>
-            </div>
-            <label className="museum-field" htmlFor="exhibit-type">
-              <span className="museum-field__label">Exhibit type <span aria-hidden="true">*</span></span>
-              <select className="museum-input" id="exhibit-type" required {...register("type")}>
+            <Field className="museum-field">
+              <FieldLabel htmlFor="exhibit-title">Working title <span aria-hidden="true">*</span></FieldLabel>
+              <Input aria-describedby="exhibit-title-hint" autoFocus id="exhibit-title" label="" required {...register("title")} />
+              <FieldDescription id="exhibit-title-hint">A name can be tentative. It only needs to help you recognize this work.</FieldDescription>
+            </Field>
+            <Field className="museum-field">
+              <FieldLabel htmlFor="exhibit-type">Exhibit type <span aria-hidden="true">*</span></FieldLabel>
+              <NativeSelect className="w-full" id="exhibit-type" required {...register("type")}>
                 <option value="">Choose a type</option>
                 {exhibitTypes.map(({ label, value }) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            <label className="museum-field" htmlFor="exhibit-status">
-              <span className="museum-field__label">Initial status <span aria-hidden="true">*</span></span>
-              <select className="museum-input" id="exhibit-status" required {...register("status")}>
+              </NativeSelect>
+            </Field>
+            <Field className="museum-field">
+              <FieldLabel htmlFor="exhibit-status">Initial status <span aria-hidden="true">*</span></FieldLabel>
+              <NativeSelect className="w-full" id="exhibit-status" required {...register("status")}>
                 {initialStatuses.map(({ label, value }) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            <div className="museum-field">
-              <label className="museum-field__label" htmlFor="exhibit-tags">Tags</label>
-              <input aria-describedby="exhibit-tags-hint" className="museum-input" id="exhibit-tags" placeholder="Research, harbor, maybe later" {...register("tags")} />
-              <span className="museum-field__hint" id="exhibit-tags-hint">Separate tags with commas. They are for finding your way back, not for grading the work.</span>
-            </div>
+              </NativeSelect>
+            </Field>
+            <Field className="museum-field">
+              <FieldLabel htmlFor="exhibit-tags">Tags</FieldLabel>
+              <Input aria-describedby="exhibit-tags-hint" id="exhibit-tags" label="" placeholder="Research, harbor, maybe later" {...register("tags")} />
+              <FieldDescription id="exhibit-tags-hint">Separate tags with commas. They are for finding your way back, not for grading the work.</FieldDescription>
+            </Field>
           </fieldset>
         ) : null}
 
@@ -352,25 +356,13 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
               {quotaWarning ? <p className="exhibit-capture__quota-warning" role="status">{quotaWarning}</p> : null}
             </div>
             <div className="exhibit-capture__evidence-form">
-              <label className="museum-field" htmlFor="link-label">
-                <span className="museum-field__label">Link label</span>
-                <input className="museum-input" id="link-label" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} />
-              </label>
-              <label className="museum-field" htmlFor="link-address">
-                <span className="museum-field__label">Link address</span>
-                <input className="museum-input" id="link-address" onChange={(event) => setLinkAddress(event.target.value)} placeholder="https://" type="url" value={linkAddress} />
-              </label>
+              <Field className="museum-field"><FieldLabel htmlFor="link-label">Link label</FieldLabel><Input id="link-label" label="" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} /></Field>
+              <Field className="museum-field"><FieldLabel htmlFor="link-address">Link address</FieldLabel><Input id="link-address" label="" onChange={(event) => setLinkAddress(event.target.value)} placeholder="https://" type="url" value={linkAddress} /></Field>
               <Button onClick={addLink} type="button" variant="secondary">Add link</Button>
             </div>
             <div className="exhibit-capture__evidence-form">
-              <label className="museum-field" htmlFor="note-label">
-                <span className="museum-field__label">Note label</span>
-                <input className="museum-input" id="note-label" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} />
-              </label>
-              <label className="museum-field" htmlFor="exhibit-note">
-                <span className="museum-field__label">Note</span>
-                <textarea className="museum-input" id="exhibit-note" onChange={(event) => setNote(event.target.value)} rows={4} value={note} />
-              </label>
+              <Field className="museum-field"><FieldLabel htmlFor="note-label">Note label</FieldLabel><Input id="note-label" label="" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} /></Field>
+              <Field className="museum-field"><FieldLabel htmlFor="exhibit-note">Note</FieldLabel><Textarea id="exhibit-note" onChange={(event) => setNote(event.target.value)} rows={4} value={note} /></Field>
               <Button onClick={addNote} type="button" variant="secondary">Add note</Button>
             </div>
             {evidence.length > 0 ? (
@@ -400,23 +392,14 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         {step === 3 ? (
           <fieldset>
             <legend>Story</legend>
-            <div className="museum-field">
-              <label className="museum-field__label" htmlFor="museum-label">Museum label <span aria-hidden="true">*</span></label>
-              <input aria-describedby="museum-label-hint" autoFocus className="museum-input" id="museum-label" required {...register("museumLabel")} />
-              <span className="museum-field__hint" id="museum-label-hint">A small line that helps you remember what this was trying to become.</span>
-            </div>
-            <label className="museum-field" htmlFor="why-started">
-              <span className="museum-field__label">Why did this begin?</span>
-              <textarea className="museum-input" id="why-started" rows={4} {...register("whyStarted")} />
-            </label>
-            <label className="museum-field" htmlFor="why-stopped">
-              <span className="museum-field__label">Where did it pause?</span>
-              <textarea className="museum-input" id="why-stopped" rows={4} {...register("whyStopped")} />
-            </label>
-            <label className="museum-field" htmlFor="what-it-taught-me">
-              <span className="museum-field__label">What did it teach you?</span>
-              <textarea className="museum-input" id="what-it-taught-me" rows={4} {...register("whatItTaughtMe")} />
-            </label>
+            <Field className="museum-field">
+              <FieldLabel htmlFor="museum-label">Museum label <span aria-hidden="true">*</span></FieldLabel>
+              <Input aria-describedby="museum-label-hint" autoFocus id="museum-label" label="" required {...register("museumLabel")} />
+              <FieldDescription id="museum-label-hint">A small line that helps you remember what this was trying to become.</FieldDescription>
+            </Field>
+            <Field className="museum-field"><FieldLabel htmlFor="why-started">Why did this begin?</FieldLabel><Textarea id="why-started" rows={4} {...register("whyStarted")} /></Field>
+            <Field className="museum-field"><FieldLabel htmlFor="why-stopped">Where did it pause?</FieldLabel><Textarea id="why-stopped" rows={4} {...register("whyStopped")} /></Field>
+            <Field className="museum-field"><FieldLabel htmlFor="what-it-taught-me">What did it teach you?</FieldLabel><Textarea id="what-it-taught-me" rows={4} {...register("whatItTaughtMe")} /></Field>
           </fieldset>
         ) : null}
 
