@@ -7,7 +7,11 @@ import {
   historyEventSchema,
   type Artifact,
 } from "@/lib/domain";
-import { type ExhibitRepository, type MuseumSnapshot } from "@/lib/persistence";
+import {
+  type ExhibitRepository,
+  type MuseumSnapshot,
+  validateMuseumSnapshot,
+} from "@/lib/persistence";
 
 const serializedBlobSchema = z.object({
   data: z.string().regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),
@@ -143,11 +147,11 @@ export async function previewCollectionBackup(json: string): Promise<CollectionB
       artifacts: wireEnvelope.artifacts.map(deserializeArtifact),
       history: wireEnvelope.history.map((event) => historyEventSchema.parse(event)),
     });
-    const snapshot = {
+    const snapshot = validateMuseumSnapshot({
       exhibits: envelope.exhibits,
       artifacts: envelope.artifacts,
       history: envelope.history,
-    } satisfies MuseumSnapshot;
+    });
 
     return {
       artifacts: snapshot.artifacts.length,
