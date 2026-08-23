@@ -10,6 +10,7 @@ test("serves the exported museum landing page", async ({ page }) => {
 test("ships a manifest, generated icons, offline fallback, and a production service worker", async ({ context, page, request }) => {
   const manifestResponse = await request.get("/manifest.webmanifest");
   expect(manifestResponse.ok()).toBe(true);
+  expect(manifestResponse.headers()["content-type"]).toContain("application/manifest+json");
   await expect(manifestResponse.json()).resolves.toMatchObject({
     display: "standalone",
     start_url: "/",
@@ -20,6 +21,7 @@ test("ships a manifest, generated icons, offline fallback, and a production serv
   });
   const iconResponse = await request.get("/icons/almost-museum-192.png");
   expect(iconResponse.ok()).toBe(true);
+  expect(iconResponse.headers()["content-type"]).toContain("image/png");
 
   await page.goto("/offline");
   await expect(page.getByRole("heading", { name: "You can still visit the Museum." })).toBeVisible();
