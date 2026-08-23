@@ -17,6 +17,22 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: "**/offline.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "firefox",
+      testIgnore: "**/offline.spec.ts",
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit",
+      testIgnore: "**/offline.spec.ts",
+      use: { ...devices["Desktop Safari"] },
+    },
+    {
+      name: "chromium-offline",
+      testMatch: "**/offline.spec.ts",
       use: { ...devices["Desktop Chrome"] },
     },
   ],
