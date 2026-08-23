@@ -725,13 +725,6 @@ body:has(.landing-page) .app-root {
   justify-self: end;
 }
 
-@media (min-width: 76rem) {
-  .site-header,
-  body:has(.landing-page) .app-root {
-    max-width: 76rem;
-  }
-}
-
 @media (max-width: 48rem) {
   .site-header {
     grid-template-columns: 1fr auto;

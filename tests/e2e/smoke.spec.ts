@@ -51,6 +51,28 @@ test("keeps the landing experience contained and stacked on a narrow viewport", 
   expect(noteBox!.y).toBeGreaterThan(actionBox!.y + actionBox!.height);
 });
 
+test("uses the available width on a large desktop viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+
+  const [headerBox, landingBox, pageWidth] = await Promise.all([
+    page.locator(".site-header").boundingBox(),
+    page.locator("main.landing-page").boundingBox(),
+    page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    })),
+  ]);
+
+  expect(headerBox).not.toBeNull();
+  expect(landingBox).not.toBeNull();
+  expect(headerBox!.x).toBeLessThanOrEqual(24);
+  expect(landingBox!.x).toBeLessThanOrEqual(24);
+  expect(headerBox!.width).toBeGreaterThan(1840);
+  expect(landingBox!.width).toBeGreaterThan(1840);
+  expect(pageWidth.scrollWidth).toBeLessThanOrEqual(pageWidth.viewportWidth);
+});
+
 test("captures an Exhibit through the exported clean routes", async ({ page }) => {
   await openHydratedCapture(page);
 
