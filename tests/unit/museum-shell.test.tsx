@@ -1,11 +1,25 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
 import HomePage from "../../app/page";
 import { MuseumShell } from "../../components/museum-shell";
 import { Dialog } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
+
+function DialogTriggerHarness() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button onClick={() => setIsOpen(true)} type="button">Open collection note</button>
+      <Dialog isOpen={isOpen} onOpenChange={setIsOpen} title="Collection note">
+        <button type="button">Confirm note</button>
+      </Dialog>
+    </>
+  );
+}
 
 describe("museum shell", () => {
   it("exposes named primary navigation that can be reached with the keyboard", async () => {
@@ -59,6 +73,20 @@ describe("museum shell", () => {
 
     await user.tab();
     expect(closeButton).toHaveFocus();
+  });
+
+  it("returns focus to an unchanged trigger when a dialog is dismissed with Escape", async () => {
+    const user = userEvent.setup();
+    render(<DialogTriggerHarness />);
+
+    const trigger = screen.getByRole("button", { name: "Open collection note" });
+    await user.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Collection note" })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog", { name: "Collection note" })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 
   it("creates unique input IDs and retains every description reference", () => {

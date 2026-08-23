@@ -23,12 +23,16 @@ The new component tests were written and observed failing before implementation.
 
 All commands were run in this worktree on 2026-08-23:
 
-- `pnpm test:unit` — 23 files, 127 tests passed.
+- `pnpm test:unit` — 23 files, 129 tests passed.
 - `pnpm lint` — passed.
 - `pnpm typecheck` — passed.
 - `pnpm build` — static export and Serwist service worker completed.
 - `pnpm test:pwa:clean` — clean PWA shell verification passed.
-- `pnpm exec playwright test` — 6 Chromium browser checks passed, including offline fallback and 375 px capture/landing containment.
+- `pnpm exec playwright test` — 7 Chromium browser checks passed, including offline fallback, 375 px capture/landing containment, and successful-closure focus restoration.
 - `git diff --check` — passed.
 
 No axe package is installed in the project, so the audit used semantic component assertions and the existing exported-app browser coverage rather than adding a new dependency for this focused hardening task.
+
+## Focus restoration follow-up
+
+Closure actions can replace the control that opened their confirmation dialog. `Dialog` now accepts an explicit stable restoration target plus a success-only restoration signal. On a successful Archive, Complete, Release, Transform, or Revive mutation, it restores focus to the surviving Exhibit heading instead of the removed trigger; Escape and Cancel continue restoring the original trigger. Component and Chromium regression tests cover both paths.
