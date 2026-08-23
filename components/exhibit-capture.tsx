@@ -1,12 +1,20 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useForm } from "react-hook-form";
 
 import { validateArtifactFile, type ValidatedFileArtifact } from "@/lib/artifacts/file-validation";
 import { getStorageQuotaWarning } from "@/lib/artifacts/storage-quota";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import type { ExhibitStatus, ExhibitType } from "@/lib/domain";
+import {
+  exhibitCaptureFormSchema,
+  type ExhibitCaptureFormValues,
+  type ValidatedExhibitCaptureFormValues,
+} from "@/lib/forms/exhibit-capture-form";
 import { ExhibitRepository, type CaptureArtifactInput } from "@/lib/persistence";
 
 const exhibitTypes: Array<{ value: ExhibitType; label: string }> = [
@@ -40,6 +48,8 @@ interface FileEvidenceDraft extends ValidatedFileArtifact {
 
 type EvidenceDraft = LinkEvidenceDraft | NoteEvidenceDraft | FileEvidenceDraft;
 
+const identityFields = ["title", "type", "status"] as const;
+
 export interface ExhibitCaptureProps {
   repository?: ExhibitRepository;
   onNavigate?: (href: string) => void;
@@ -61,26 +71,46 @@ function pendingFileBytes(evidence: EvidenceDraft[]): number {
 export function ExhibitCapture({ repository: suppliedRepository, onNavigate = browserNavigate }: Readonly<ExhibitCaptureProps>) {
   const [repository] = useState(() => suppliedRepository ?? new ExhibitRepository());
   const [step, setStep] = useState(1);
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState<ExhibitType | "">("");
-  const [status, setStatus] = useState<"unfinished" | "active" | "">("unfinished");
-  const [tags, setTags] = useState("");
-  const [museumLabel, setMuseumLabel] = useState("");
-  const [whyStarted, setWhyStarted] = useState("");
-  const [whyStopped, setWhyStopped] = useState("");
-  const [whatItTaughtMe, setWhatItTaughtMe] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
   const [linkAddress, setLinkAddress] = useState("");
   const [noteLabel, setNoteLabel] = useState("");
   const [note, setNote] = useState("");
   const [evidence, setEvidence] = useState<EvidenceDraft[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [interactionErrors, setInteractionErrors] = useState<string[]>([]);
   const [quotaWarning, setQuotaWarning] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const previewUrls = useRef(new Set<string>());
   const errorSummaryRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+  const {
+    clearErrors,
+    formState: { errors: formErrors },
+    handleSubmit: submitValidatedForm,
+    register,
+    trigger,
+  } = useForm<ExhibitCaptureFormValues, unknown, ValidatedExhibitCaptureFormValues>({
+    defaultValues: {
+      museumLabel: "",
+      status: "unfinished",
+      tags: "",
+      title: "",
+      type: "",
+      whatItTaughtMe: "",
+      whyStarted: "",
+      whyStopped: "",
+    },
+    resolver: zodResolver(exhibitCaptureFormSchema),
+  });
+  const stepValidationErrors = step === 1
+    ? [formErrors.title?.message, formErrors.type?.message, formErrors.status?.message]
+    : step === 3
+      ? [formErrors.museumLabel?.message]
+      : [];
+  const errors = [...stepValidationErrors, ...interactionErrors]
+    .filter((message): message is string => typeof message === "string");
+  const errorKey = errors.join("\n");
 
   useEffect(() => () => {
     previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
@@ -93,8 +123,8 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   }, []);
 
   useEffect(() => {
-    if (errors.length > 0) errorSummaryRef.current?.focus();
-  }, [errors]);
+    if (errorKey !== "") errorSummaryRef.current?.focus();
+  }, [errorKey]);
 
   useEffect(() => {
     const pendingBytes = pendingFileBytes(evidence);
@@ -117,27 +147,6 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     };
   }, [evidence]);
 
-  function validateIdentity(): boolean {
-    const nextErrors = [
-      ...(title.trim() ? [] : ["Add a title before continuing."]),
-      ...(type ? [] : ["Choose an Exhibit type before continuing."]),
-      ...(status ? [] : ["Choose an initial status before continuing."]),
-    ];
-    setErrors(nextErrors);
-    return nextErrors.length === 0;
-  }
-
-  function validateStory(): boolean {
-    const nextErrors = museumLabel.trim() ? [] : ["Add a museum label before saving."];
-    setErrors(nextErrors);
-    return nextErrors.length === 0;
-  }
-
-  function moveToEvidence() {
-    if (!validateIdentity()) return;
-    setStep(2);
-  }
-
   function addLink() {
     const nextErrors = [
       ...(linkLabel.trim() ? [] : ["Give this link a short label before adding it."]),
@@ -151,14 +160,14 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     }
 
     if (nextErrors.length > 0) {
-      setErrors(nextErrors);
+      setInteractionErrors(nextErrors);
       return;
     }
 
     setEvidence((current) => [...current, { kind: "link", label: linkLabel, value: linkAddress }]);
     setLinkLabel("");
     setLinkAddress("");
-    setErrors([]);
+    setInteractionErrors([]);
   }
 
   function addNote() {
@@ -167,14 +176,14 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
       ...(note.trim() ? [] : ["Write a note before adding it."]),
     ];
     if (nextErrors.length > 0) {
-      setErrors(nextErrors);
+      setInteractionErrors(nextErrors);
       return;
     }
 
     setEvidence((current) => [...current, { kind: "note", label: noteLabel, value: note }]);
     setNoteLabel("");
     setNote("");
-    setErrors([]);
+    setInteractionErrors([]);
   }
 
   function releasePreview(url: string) {
@@ -190,14 +199,14 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   function addFile(file: File) {
     const validation = validateArtifactFile(file);
     if (!validation.valid) {
-      setErrors([validation.message]);
+      setInteractionErrors([validation.message]);
       return;
     }
 
     const previewUrl = URL.createObjectURL(validation.artifact.blob);
     previewUrls.current.add(previewUrl);
     setEvidence((current) => [...current, { ...validation.artifact, previewUrl }]);
-    setErrors([]);
+    setInteractionErrors([]);
   }
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
@@ -214,11 +223,9 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     });
   }
 
-  async function saveExhibit() {
-    if (!validateStory() || type === "" || status === "") return;
-
+  async function saveExhibit(values: ValidatedExhibitCaptureFormValues) {
     setIsSaving(true);
-    setErrors([]);
+    setInteractionErrors([]);
     try {
       const artifacts: CaptureArtifactInput[] = evidence.map((item) => {
         if (item.kind === "link") return { kind: "link", label: item.label, url: item.value };
@@ -233,35 +240,46 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         };
       });
       const exhibit = await repository.captureExhibit({
-        title,
-        type,
-        status,
-        museumLabel,
-        whyStarted: optionalValue(whyStarted),
-        whyStopped: optionalValue(whyStopped),
-        whatItTaughtMe: optionalValue(whatItTaughtMe),
-        tags: tags.split(","),
+        title: values.title,
+        type: values.type,
+        status: values.status,
+        museumLabel: values.museumLabel,
+        whyStarted: optionalValue(values.whyStarted),
+        whyStopped: optionalValue(values.whyStopped),
+        whatItTaughtMe: optionalValue(values.whatItTaughtMe),
+        tags: values.tags.split(","),
       }, artifacts);
 
       releaseAllPreviews();
       onNavigate(`/exhibit?id=${exhibit.id}`);
     } catch {
-      setErrors(["Your Exhibit is still here. Please try saving again."]);
+      setInteractionErrors(["Your Exhibit is still here. Please try saving again."]);
       setIsSaving(false);
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleStepSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (step === 1) moveToEvidence();
-    else if (step === 2) {
-      setErrors([]);
+    if (step === 1) {
+      setInteractionErrors([]);
+      if (await trigger(identityFields)) setStep(2);
+    } else if (step === 2) {
+      clearErrors();
+      setInteractionErrors([]);
       setStep(3);
-    } else void saveExhibit();
+    } else {
+      await submitValidatedForm(saveExhibit)(event);
+    }
   }
 
   return (
-    <main aria-busy={!isHydrated} className="exhibit-capture">
+    <motion.main
+      animate={{ opacity: 1, y: 0 }}
+      aria-busy={!isHydrated}
+      className="exhibit-capture"
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+      transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.35, ease: "easeOut" }}
+    >
       <header className="exhibit-capture__header">
         <p className="museum-eyebrow">New Exhibit</p>
         <h1>{step === 1 ? "Give the work a place" : step === 2 ? "Keep a trace of it" : "Tell its story"}</h1>
@@ -285,7 +303,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         </ol>
       </div>
 
-      <form className="exhibit-capture__step-panel" noValidate onSubmit={handleSubmit}>
+      <form className="exhibit-capture__step-panel" noValidate onSubmit={(event) => void handleStepSubmit(event)}>
         {errors.length > 0 ? (
           <div aria-live="assertive" className="exhibit-capture__errors" ref={errorSummaryRef} role="alert" tabIndex={-1}>
             {errors.map((error) => <p key={error}>{error}</p>)}
@@ -297,25 +315,25 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
             <legend>Identity</legend>
             <div className="museum-field">
               <label className="museum-field__label" htmlFor="exhibit-title">Working title <span aria-hidden="true">*</span></label>
-              <input aria-describedby="exhibit-title-hint" autoFocus className="museum-input" id="exhibit-title" onChange={(event) => setTitle(event.target.value)} required value={title} />
+              <input aria-describedby="exhibit-title-hint" autoFocus className="museum-input" id="exhibit-title" required {...register("title")} />
               <span className="museum-field__hint" id="exhibit-title-hint">A name can be tentative. It only needs to help you recognize this work.</span>
             </div>
             <label className="museum-field" htmlFor="exhibit-type">
               <span className="museum-field__label">Exhibit type <span aria-hidden="true">*</span></span>
-              <select className="museum-input" id="exhibit-type" onChange={(event) => setType(event.target.value as ExhibitType | "")} required value={type}>
+              <select className="museum-input" id="exhibit-type" required {...register("type")}>
                 <option value="">Choose a type</option>
                 {exhibitTypes.map(({ label, value }) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
             <label className="museum-field" htmlFor="exhibit-status">
               <span className="museum-field__label">Initial status <span aria-hidden="true">*</span></span>
-              <select className="museum-input" id="exhibit-status" onChange={(event) => setStatus(event.target.value as "unfinished" | "active" | "")} required value={status}>
+              <select className="museum-input" id="exhibit-status" required {...register("status")}>
                 {initialStatuses.map(({ label, value }) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
             <div className="museum-field">
               <label className="museum-field__label" htmlFor="exhibit-tags">Tags</label>
-              <input aria-describedby="exhibit-tags-hint" className="museum-input" id="exhibit-tags" onChange={(event) => setTags(event.target.value)} placeholder="Research, harbor, maybe later" value={tags} />
+              <input aria-describedby="exhibit-tags-hint" className="museum-input" id="exhibit-tags" placeholder="Research, harbor, maybe later" {...register("tags")} />
               <span className="museum-field__hint" id="exhibit-tags-hint">Separate tags with commas. They are for finding your way back, not for grading the work.</span>
             </div>
           </fieldset>
@@ -384,20 +402,20 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
             <legend>Story</legend>
             <div className="museum-field">
               <label className="museum-field__label" htmlFor="museum-label">Museum label <span aria-hidden="true">*</span></label>
-              <input aria-describedby="museum-label-hint" autoFocus className="museum-input" id="museum-label" onChange={(event) => setMuseumLabel(event.target.value)} required value={museumLabel} />
+              <input aria-describedby="museum-label-hint" autoFocus className="museum-input" id="museum-label" required {...register("museumLabel")} />
               <span className="museum-field__hint" id="museum-label-hint">A small line that helps you remember what this was trying to become.</span>
             </div>
             <label className="museum-field" htmlFor="why-started">
               <span className="museum-field__label">Why did this begin?</span>
-              <textarea className="museum-input" id="why-started" onChange={(event) => setWhyStarted(event.target.value)} rows={4} value={whyStarted} />
+              <textarea className="museum-input" id="why-started" rows={4} {...register("whyStarted")} />
             </label>
             <label className="museum-field" htmlFor="why-stopped">
               <span className="museum-field__label">Where did it pause?</span>
-              <textarea className="museum-input" id="why-stopped" onChange={(event) => setWhyStopped(event.target.value)} rows={4} value={whyStopped} />
+              <textarea className="museum-input" id="why-stopped" rows={4} {...register("whyStopped")} />
             </label>
             <label className="museum-field" htmlFor="what-it-taught-me">
               <span className="museum-field__label">What did it teach you?</span>
-              <textarea className="museum-input" id="what-it-taught-me" onChange={(event) => setWhatItTaughtMe(event.target.value)} rows={4} value={whatItTaughtMe} />
+              <textarea className="museum-input" id="what-it-taught-me" rows={4} {...register("whatItTaughtMe")} />
             </label>
           </fieldset>
         ) : null}
@@ -405,7 +423,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         <div className="exhibit-capture__actions">
           <Button onClick={() => setIsCancelDialogOpen(true)} type="button" variant="quiet">Cancel capture</Button>
           <div>
-            {step > 1 ? <Button onClick={() => { setErrors([]); setStep((current) => current - 1); }} type="button" variant="secondary">{step === 2 ? "Back to identity" : "Back to evidence"}</Button> : null}
+            {step > 1 ? <Button onClick={() => { clearErrors(); setInteractionErrors([]); setStep((current) => current - 1); }} type="button" variant="secondary">{step === 2 ? "Back to identity" : "Back to evidence"}</Button> : null}
             {step === 1 ? <Button type="submit">Continue to evidence</Button> : null}
             {step === 2 ? <Button type="submit">Continue to story</Button> : null}
             {step === 3 ? <Button disabled={isSaving} type="submit">{isSaving ? "Saving Exhibit…" : "Save Exhibit"}</Button> : null}
@@ -424,6 +442,6 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
           <Button onClick={() => onNavigate("/museum")} variant="danger">Leave without saving</Button>
         </div>
       </Dialog>
-    </main>
+    </motion.main>
   );
 }

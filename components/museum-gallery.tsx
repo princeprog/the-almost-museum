@@ -6,23 +6,16 @@ import { useEffect, useMemo, useState } from "react";
 import { getExhibitRooms, type Exhibit, type ExhibitStatus, type ExhibitType } from "@/lib/domain";
 import { filterAndSortExhibits, type GalleryFilters, type GalleryRoom, type GallerySort } from "@/lib/gallery";
 import { ExhibitRepository } from "@/lib/persistence";
+import { useGalleryPreferenceStore } from "@/lib/stores/gallery-preferences";
 
-type GalleryView = "grid" | "list";
+type GalleryFilterControls = Omit<GalleryFilters, "sort">;
 
-interface GalleryPreferences {
-  sort: GallerySort;
-  view: GalleryView;
-}
-
-const galleryPreferenceKey = "almost-museum.gallery.preferences";
-
-const defaultFilters: GalleryFilters = {
+const defaultFilterControls: GalleryFilterControls = {
   room: "lobby",
   type: "all",
   status: "all",
   tag: "all",
   query: "",
-  sort: "updated-desc",
 };
 
 const roomOptions: Array<{ label: string; value: GalleryRoom }> = [
@@ -46,28 +39,6 @@ function formatLabel(value: string): string {
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
-}
-
-function readPreferences(): GalleryPreferences | undefined {
-  if (typeof window === "undefined") return undefined;
-
-  try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(galleryPreferenceKey) ?? "null");
-    if (
-      typeof parsed === "object"
-      && parsed !== null
-      && "view" in parsed
-      && "sort" in parsed
-      && (parsed.view === "grid" || parsed.view === "list")
-      && (parsed.sort === "updated-desc" || parsed.sort === "created-desc" || parsed.sort === "title-asc")
-    ) {
-      return { view: parsed.view, sort: parsed.sort };
-    }
-  } catch {
-    // A malformed local preference should never block a private collection.
-  }
-
-  return undefined;
 }
 
 function GalleryCard({ exhibit }: Readonly<{ exhibit: Exhibit }>) {
@@ -106,20 +77,18 @@ function GalleryCard({ exhibit }: Readonly<{ exhibit: Exhibit }>) {
 export function MuseumGallery({ initialExhibits, repository: suppliedRepository }: Readonly<MuseumGalleryProps>) {
   const [repository] = useState(() => suppliedRepository ?? new ExhibitRepository());
   const [exhibits, setExhibits] = useState<readonly Exhibit[] | null>(initialExhibits ?? null);
-  const [filters, setFilters] = useState<GalleryFilters>(defaultFilters);
-  const [view, setView] = useState<GalleryView>("grid");
-  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [filterControls, setFilterControls] = useState<GalleryFilterControls>(defaultFilterControls);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const hydratePreferences = useGalleryPreferenceStore((state) => state.hydrate);
+  const setSort = useGalleryPreferenceStore((state) => state.setSort);
+  const setView = useGalleryPreferenceStore((state) => state.setView);
+  const sort = useGalleryPreferenceStore((state) => state.sort);
+  const view = useGalleryPreferenceStore((state) => state.view);
 
   useEffect(() => {
-    const saved = readPreferences();
-    if (saved !== undefined) {
-      setView(saved.view);
-      setFilters((current) => ({ ...current, sort: saved.sort }));
-    }
-    setPreferencesReady(true);
-  }, []);
+    hydratePreferences();
+  }, [hydratePreferences]);
 
   useEffect(() => {
     if (initialExhibits !== undefined) {
@@ -147,15 +116,14 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
     };
   }, [initialExhibits, loadAttempt, repository, suppliedRepository]);
 
-  useEffect(() => {
-    if (!preferencesReady || typeof window === "undefined") return;
-    window.localStorage.setItem(galleryPreferenceKey, JSON.stringify({ view, sort: filters.sort } satisfies GalleryPreferences));
-  }, [filters.sort, preferencesReady, view]);
-
   const tags = useMemo(
     () => Array.from(new Set((exhibits ?? []).flatMap((exhibit) => exhibit.tags)))
       .sort((left, right) => left.localeCompare(right)),
     [exhibits],
+  );
+  const filters = useMemo<GalleryFilters>(
+    () => ({ ...filterControls, sort }),
+    [filterControls, sort],
   );
   const visibleExhibits = useMemo(
     () => exhibits === null ? [] : filterAndSortExhibits(exhibits, filters),
@@ -191,10 +159,10 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
       <nav aria-label="Museum rooms" className="museum-gallery__rooms">
         {roomOptions.map((option) => (
           <button
-            aria-pressed={filters.room === option.value}
+            aria-pressed={filterControls.room === option.value}
             className="museum-gallery__room"
             key={option.value}
-            onClick={() => setFilters((current) => ({ ...current, room: option.value }))}
+            onClick={() => setFilterControls((current) => ({ ...current, room: option.value }))}
             type="button"
           >
             {option.label}
@@ -208,36 +176,36 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
           <input
             className="museum-input"
             id="gallery-search"
-            onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
+            onChange={(event) => setFilterControls((current) => ({ ...current, query: event.target.value }))}
             placeholder="Title, label, or tag"
             type="search"
-            value={filters.query}
+            value={filterControls.query}
           />
         </label>
         <label className="museum-field" htmlFor="gallery-type">
           <span className="museum-field__label">Exhibit type</span>
-          <select className="museum-input" id="gallery-type" onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value as GalleryFilters["type"] }))} value={filters.type}>
+          <select className="museum-input" id="gallery-type" onChange={(event) => setFilterControls((current) => ({ ...current, type: event.target.value as GalleryFilters["type"] }))} value={filterControls.type}>
             <option value="all">All types</option>
             {typeOptions.map((type) => <option key={type} value={type}>{formatLabel(type)}</option>)}
           </select>
         </label>
         <label className="museum-field" htmlFor="gallery-status">
           <span className="museum-field__label">Status</span>
-          <select className="museum-input" id="gallery-status" onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value as GalleryFilters["status"] }))} value={filters.status}>
+          <select className="museum-input" id="gallery-status" onChange={(event) => setFilterControls((current) => ({ ...current, status: event.target.value as GalleryFilters["status"] }))} value={filterControls.status}>
             <option value="all">All statuses</option>
             {statusOptions.map((status) => <option key={status} value={status}>{formatLabel(status)}</option>)}
           </select>
         </label>
         <label className="museum-field" htmlFor="gallery-tag">
           <span className="museum-field__label">Tag</span>
-          <select className="museum-input" id="gallery-tag" onChange={(event) => setFilters((current) => ({ ...current, tag: event.target.value }))} value={filters.tag}>
+          <select className="museum-input" id="gallery-tag" onChange={(event) => setFilterControls((current) => ({ ...current, tag: event.target.value }))} value={filterControls.tag}>
             <option value="all">All tags</option>
             {tags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
           </select>
         </label>
         <label className="museum-field" htmlFor="gallery-sort">
           <span className="museum-field__label">Sort collection</span>
-          <select className="museum-input" id="gallery-sort" onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value as GallerySort }))} value={filters.sort}>
+          <select className="museum-input" id="gallery-sort" onChange={(event) => setSort(event.target.value as GallerySort)} value={sort}>
             <option value="updated-desc">Recently tended</option>
             <option value="created-desc">Recently added</option>
             <option value="title-asc">Title, A to Z</option>
@@ -247,7 +215,7 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
 
       <div className="museum-gallery__summary">
         <p aria-label="Gallery result count" role="status">{resultLabel}</p>
-        <button className="museum-button museum-button--quiet" onClick={() => setView((current) => current === "grid" ? "list" : "grid")} type="button">
+        <button className="museum-button museum-button--quiet" onClick={() => setView(view === "grid" ? "list" : "grid")} type="button">
           {view === "grid" ? "Show list view" : "Show grid view"}
         </button>
       </div>
@@ -261,7 +229,7 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
           <p className="museum-eyebrow">Unvisited</p>
           <h2 id="gallery-empty-title">Nothing is hidden here.</h2>
           <p>Try a different room or loosen one of the filters to return to your collection.</p>
-          <button className="museum-button museum-button--secondary" onClick={() => setFilters(defaultFilters)} type="button">Clear filters</button>
+          <button className="museum-button museum-button--secondary" onClick={() => { setFilterControls(defaultFilterControls); setSort("updated-desc"); }} type="button">Clear filters</button>
         </section>
       )}
     </section>
