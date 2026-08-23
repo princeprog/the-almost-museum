@@ -489,13 +489,13 @@ p {
   text-transform: uppercase;
 }
 
-.museum-gallery__room[aria-pressed="true"] {
+.museum-gallery__room[data-pressed] {
   background: var(--charcoal);
   border-color: var(--charcoal);
   color: var(--paper);
 }
 
-.museum-gallery__room:hover:not([aria-pressed="true"]) {
+.museum-gallery__room:hover:not([data-pressed]) {
   border-color: var(--border-strong);
   color: var(--rust-deep);
 }
@@ -640,13 +640,10 @@ p {
   padding: 0;
 }
 
-.museum-gallery__tags li {
-  border: 1px solid var(--border);
-  color: var(--charcoal-muted);
+.museum-gallery__tags [data-slot="badge"] {
   font-family: var(--font-mono);
   font-size: 0.61rem;
   letter-spacing: 0.05em;
-  padding: 0.22rem var(--space-2);
   text-transform: uppercase;
 }
 

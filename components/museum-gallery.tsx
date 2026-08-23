@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getExhibitRooms, type Exhibit, type ExhibitStatus, type ExhibitType } from "@/lib/domain";
 import { filterAndSortExhibits, type GalleryFilters, type GalleryRoom, type GallerySort } from "@/lib/gallery";
 import { ExhibitRepository } from "@/lib/persistence";
@@ -48,8 +54,8 @@ function GalleryCard({ exhibit }: Readonly<{ exhibit: Exhibit }>) {
     <li className="museum-gallery__card">
       <article>
         <div className="museum-gallery__card-meta">
-          <span>{formatLabel(exhibit.type)}</span>
-          <span>{formatLabel(exhibit.status)}</span>
+          <Badge variant="outline">{formatLabel(exhibit.type)}</Badge>
+          <Badge variant="outline">{formatLabel(exhibit.status)}</Badge>
         </div>
         <h2><Link href={`/exhibit?id=${exhibit.id}`}>{exhibit.title}</Link></h2>
         <p>{exhibit.museumLabel}</p>
@@ -65,7 +71,7 @@ function GalleryCard({ exhibit }: Readonly<{ exhibit: Exhibit }>) {
         </dl>
         {exhibit.tags.length > 0 ? (
           <ul aria-label={`Tags for ${exhibit.title}`} className="museum-gallery__tags">
-            {exhibit.tags.map((tag) => <li key={tag}>{tag}</li>)}
+            {exhibit.tags.map((tag) => <li key={tag}><Badge variant="outline">{tag}</Badge></li>)}
           </ul>
         ) : null}
       </article>
@@ -138,7 +144,7 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
         <p className="museum-eyebrow">Collection unavailable</p>
         <h1 id="gallery-recovery-title">Your collection could not be opened.</h1>
         <p role="alert">Your collection could not be opened. Your local records have not been changed. Try again, or return after this browser is ready.</p>
-        <button className="museum-button museum-button--secondary" onClick={() => setLoadAttempt((current) => current + 1)} type="button">Try opening collection again</button>
+        <Button onClick={() => setLoadAttempt((current) => current + 1)} variant="secondary">Try opening collection again</Button>
       </section>
     );
   }
@@ -153,71 +159,82 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
           <h1 id="museum-gallery-title">{roomLabel}</h1>
           <p>Move gently between rooms. Nothing here needs to earn its place.</p>
         </div>
-        <Link className="museum-button museum-button--primary" href="/exhibit/new">Create Exhibit</Link>
+        <Button asChild>
+          <Link href="/exhibit/new">Create Exhibit</Link>
+        </Button>
       </header>
 
-      <nav aria-label="Museum rooms" className="museum-gallery__rooms">
+      <ToggleGroup
+        aria-label="Museum rooms"
+        className="museum-gallery__rooms"
+        multiple={false}
+        onValueChange={([room]) => {
+          const selectedRoom = roomOptions.find((option) => option.value === room);
+          if (selectedRoom) setFilterControls((current) => ({ ...current, room: selectedRoom.value }));
+        }}
+        value={[filterControls.room]}
+      >
         {roomOptions.map((option) => (
-          <button
-            aria-pressed={filterControls.room === option.value}
+          <ToggleGroupItem
             className="museum-gallery__room"
             key={option.value}
-            onClick={() => setFilterControls((current) => ({ ...current, room: option.value }))}
-            type="button"
+            value={option.value}
           >
             {option.label}
-          </button>
+          </ToggleGroupItem>
         ))}
-      </nav>
+      </ToggleGroup>
 
       <div className="museum-gallery__controls">
-        <label className="museum-field" htmlFor="gallery-search">
-          <span className="museum-field__label">Search collection</span>
-          <input
-            className="museum-input"
+        <Field className="museum-field">
+          <FieldLabel htmlFor="gallery-search">Search collection</FieldLabel>
+          <Input
+            aria-describedby="gallery-search-description"
             id="gallery-search"
+            label=""
             onChange={(event) => setFilterControls((current) => ({ ...current, query: event.target.value }))}
             placeholder="Title, label, or tag"
             type="search"
             value={filterControls.query}
           />
-        </label>
-        <label className="museum-field" htmlFor="gallery-type">
-          <span className="museum-field__label">Exhibit type</span>
-          <select className="museum-input" id="gallery-type" onChange={(event) => setFilterControls((current) => ({ ...current, type: event.target.value as GalleryFilters["type"] }))} value={filterControls.type}>
+          <FieldDescription className="sr-only" id="gallery-search-description">Title, label, or tag</FieldDescription>
+        </Field>
+        <Field className="museum-field">
+          <FieldLabel htmlFor="gallery-type">Exhibit type</FieldLabel>
+          <NativeSelect className="w-full" id="gallery-type" onChange={(event) => setFilterControls((current) => ({ ...current, type: event.target.value as GalleryFilters["type"] }))} value={filterControls.type}>
             <option value="all">All types</option>
             {typeOptions.map((type) => <option key={type} value={type}>{formatLabel(type)}</option>)}
-          </select>
-        </label>
-        <label className="museum-field" htmlFor="gallery-status">
-          <span className="museum-field__label">Status</span>
-          <select className="museum-input" id="gallery-status" onChange={(event) => setFilterControls((current) => ({ ...current, status: event.target.value as GalleryFilters["status"] }))} value={filterControls.status}>
+          </NativeSelect>
+        </Field>
+        <Field className="museum-field">
+          <FieldLabel htmlFor="gallery-status">Status</FieldLabel>
+          <NativeSelect className="w-full" id="gallery-status" onChange={(event) => setFilterControls((current) => ({ ...current, status: event.target.value as GalleryFilters["status"] }))} value={filterControls.status}>
             <option value="all">All statuses</option>
             {statusOptions.map((status) => <option key={status} value={status}>{formatLabel(status)}</option>)}
-          </select>
-        </label>
-        <label className="museum-field" htmlFor="gallery-tag">
-          <span className="museum-field__label">Tag</span>
-          <select className="museum-input" id="gallery-tag" onChange={(event) => setFilterControls((current) => ({ ...current, tag: event.target.value }))} value={filterControls.tag}>
+          </NativeSelect>
+        </Field>
+        <Field className="museum-field">
+          <FieldLabel htmlFor="gallery-tag">Tag</FieldLabel>
+          <NativeSelect className="w-full" id="gallery-tag" onChange={(event) => setFilterControls((current) => ({ ...current, tag: event.target.value }))} value={filterControls.tag}>
             <option value="all">All tags</option>
             {tags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
-          </select>
-        </label>
-        <label className="museum-field" htmlFor="gallery-sort">
-          <span className="museum-field__label">Sort collection</span>
-          <select className="museum-input" id="gallery-sort" onChange={(event) => setSort(event.target.value as GallerySort)} value={sort}>
+          </NativeSelect>
+        </Field>
+        <Field className="museum-field">
+          <FieldLabel htmlFor="gallery-sort">Sort collection</FieldLabel>
+          <NativeSelect className="w-full" id="gallery-sort" onChange={(event) => setSort(event.target.value as GallerySort)} value={sort}>
             <option value="updated-desc">Recently tended</option>
             <option value="created-desc">Recently added</option>
             <option value="title-asc">Title, A to Z</option>
-          </select>
-        </label>
+          </NativeSelect>
+        </Field>
       </div>
 
       <div className="museum-gallery__summary">
         <p aria-label="Gallery result count" role="status">{resultLabel}</p>
-        <button className="museum-button museum-button--quiet" onClick={() => setView(view === "grid" ? "list" : "grid")} type="button">
+        <Button onClick={() => setView(view === "grid" ? "list" : "grid")} variant="quiet">
           {view === "grid" ? "Show list view" : "Show grid view"}
-        </button>
+        </Button>
       </div>
 
       {visibleExhibits.length > 0 ? (
@@ -229,7 +246,7 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
           <p className="museum-eyebrow">Unvisited</p>
           <h2 id="gallery-empty-title">Nothing is hidden here.</h2>
           <p>Try a different room or loosen one of the filters to return to your collection.</p>
-          <button className="museum-button museum-button--secondary" onClick={() => { setFilterControls(defaultFilterControls); setSort("updated-desc"); }} type="button">Clear filters</button>
+          <Button onClick={() => { setFilterControls(defaultFilterControls); setSort("updated-desc"); }} variant="secondary">Clear filters</Button>
         </section>
       )}
     </section>

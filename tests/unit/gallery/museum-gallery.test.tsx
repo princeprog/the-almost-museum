@@ -56,6 +56,64 @@ afterEach(async () => {
 });
 
 describe("MuseumGallery", () => {
+  it("uses a single-value room toggle group with keyboard navigation", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-gallery-room-toggle-group");
+    await seedCollection(repository);
+
+    render(<MuseumGallery repository={repository} />);
+
+    const rooms = await screen.findByRole("group", { name: "Museum rooms" });
+    const lobby = screen.getByRole("button", { name: "Lobby" });
+    const workshop = screen.getByRole("button", { name: "Workshop" });
+    const archive = screen.getByRole("button", { name: "Archive" });
+
+    expect(rooms).toContainElement(lobby);
+    expect(lobby).toHaveAttribute("aria-pressed", "true");
+    expect(workshop).toHaveAttribute("aria-pressed", "false");
+
+    lobby.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(workshop).toHaveFocus();
+
+    await user.click(archive);
+    expect(archive).toHaveAttribute("aria-pressed", "true");
+    expect(lobby).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("keeps gallery filters as native selects while their selection changes", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-gallery-native-selects");
+    await seedCollection(repository);
+
+    render(<MuseumGallery repository={repository} />);
+
+    const type = await screen.findByRole("combobox", { name: "Exhibit type" });
+    const status = screen.getByRole("combobox", { name: "Status" });
+    const tag = screen.getByRole("combobox", { name: "Tag" });
+    const sort = screen.getByRole("combobox", { name: "Sort collection" });
+
+    expect(type).toHaveAttribute("id", "gallery-type");
+    expect(status).toHaveAttribute("id", "gallery-status");
+    expect(tag).toHaveAttribute("id", "gallery-tag");
+    expect(sort).toHaveAttribute("id", "gallery-sort");
+    expect(type.closest("[data-slot='native-select-wrapper']")).toBeTruthy();
+    expect(status.closest("[data-slot='native-select-wrapper']")).toBeTruthy();
+    expect(tag.closest("[data-slot='native-select-wrapper']")).toBeTruthy();
+    expect(sort.closest("[data-slot='native-select-wrapper']")).toBeTruthy();
+
+    await user.selectOptions(type, "message");
+    await user.selectOptions(status, "revived");
+    await user.selectOptions(tag, "Harbor");
+    await user.selectOptions(sort, "title-asc");
+
+    expect(type).toHaveValue("message");
+    expect(status).toHaveValue("revived");
+    expect(tag).toHaveValue("Harbor");
+    expect(sort).toHaveValue("title-asc");
+    expect(screen.getByRole("link", { name: /Unsent field notes/ })).toBeVisible();
+  });
+
   it("shows Lobby cards and narrows them through room, tag, and text filters", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-gallery-filters");
