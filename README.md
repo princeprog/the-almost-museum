@@ -96,7 +96,7 @@ For the current framework constraints, see the official [Next.js static export g
 
 GitHub Actions runs on pushes and pull requests with read-only repository permissions. It uses Node 22.15.0, Corepack, and `pnpm install --frozen-lockfile`, then runs linting, type-checking, Vitest, a static build, and the clean PWA verification.
 
-The browser matrix runs the critical journeys and smoke suite in Chromium, Firefox, and WebKit. The Chromium-only `chromium-offline` project verifies the manifest, icons, production service worker, and offline fallback. Local file-blob persistence is intentionally skipped in Playwright WebKit on Windows because that engine does not settle the Dexie Blob write transaction; link and note persistence remain covered there. This matrix is a tested baseline, not a promise of identical storage or PWA behavior in every browser version and platform.
+The browser matrix runs the critical journeys and smoke suite in Chromium, Firefox, and WebKit. The Chromium-only `chromium-offline` project verifies the manifest, icons, production service worker, and offline fallback. Local file-blob persistence is intentionally skipped in the configured Playwright WebKit project because that engine does not settle the Dexie Blob write transaction; link and note persistence remain covered there. This matrix is a tested baseline, not a promise of identical storage or PWA behavior in every browser version and platform.
 
 Before a release, run:
 
