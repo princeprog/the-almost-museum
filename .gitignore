@@ -5,6 +5,7 @@ out/
 coverage/
 playwright-report/
 test-results/
+*.tsbuildinfo
 
 # Local environment
 .env*
@@ -13,10 +14,6 @@ test-results/
 # Agent workspaces and reports
 .worktrees/
 .superpowers/
-
-# Generated service worker output
-public/sw.js
-public/swe-worker-*.js
 
 # Editor and OS files
 .DS_Store

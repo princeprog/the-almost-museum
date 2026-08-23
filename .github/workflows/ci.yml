@@ -1,0 +1,105 @@
+name: MVP quality gates
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mvp-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Static quality gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.15.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit and component tests
+        run: pnpm test:unit
+
+      - name: Static export build
+        run: pnpm build
+
+      - name: Verify a clean PWA build
+        run: pnpm test:pwa:clean
+
+  browser:
+    name: ${{ matrix.name }}
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Chromium journeys and smoke
+            browser: chromium
+            project: chromium
+            specs: tests/e2e/critical-journeys.spec.ts tests/e2e/smoke.spec.ts
+          - name: Firefox journeys and smoke
+            browser: firefox
+            project: firefox
+            specs: tests/e2e/critical-journeys.spec.ts tests/e2e/smoke.spec.ts
+          - name: WebKit journeys and smoke
+            browser: webkit
+            project: webkit
+            specs: tests/e2e/critical-journeys.spec.ts tests/e2e/smoke.spec.ts
+          - name: Chromium offline PWA
+            browser: chromium
+            project: chromium-offline
+            specs: tests/e2e/offline.spec.ts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.15.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install ${{ matrix.browser }}
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Build static export
+        run: pnpm build
+
+      - name: Run ${{ matrix.name }}
+        run: pnpm exec playwright test ${{ matrix.specs }} --project=${{ matrix.project }} --workers=2 --reporter=list,html
+
+      - name: Upload Playwright diagnostics
+        if: ${{ !cancelled() && failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ matrix.project }}-diagnostics
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
