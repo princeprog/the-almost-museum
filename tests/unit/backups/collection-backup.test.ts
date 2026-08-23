@@ -2,6 +2,7 @@ import Dexie from "dexie";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  BackupValidationError,
   exportCollectionBackup,
   previewCollectionBackup,
   restoreCollectionBackup,
@@ -31,6 +32,32 @@ afterEach(async () => {
 });
 
 describe("portable collection backups", () => {
+  const timestamp = "2026-08-23T06:00:00.000Z";
+  const exhibit: MuseumSnapshot["exhibits"][number] = {
+    id: "harbor-queue",
+    title: "Harbor Queue",
+    type: "project",
+    status: "active",
+    museumLabel: "A calmer route through the harbor",
+    tags: [],
+    relatedExhibitIds: [],
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    closedAt: null,
+  };
+
+  function backupJson(snapshot: Partial<MuseumSnapshot>): string {
+    return JSON.stringify({
+      format: "almost-museum",
+      version: 1,
+      exportedAt: timestamp,
+      exhibits: [exhibit],
+      artifacts: [],
+      history: [],
+      ...snapshot,
+    });
+  }
+
   it("round-trips file bytes and metadata through the portable JSON envelope", async () => {
     const exhibit: MuseumSnapshot["exhibits"][number] = {
       id: "harbor-queue",
@@ -141,6 +168,57 @@ describe("portable collection backups", () => {
     await expect(repository.getSnapshot()).resolves.toEqual(before);
   });
 
+  it.each([
+    ["artifact", {
+      exhibits: [],
+      artifacts: [{
+        id: "orphan-artifact",
+        exhibitId: "missing-exhibit",
+        kind: "note" as const,
+        label: "Detached note",
+        note: "This artifact has no Exhibit.",
+        createdAt: timestamp,
+      }],
+    }],
+    ["history event", {
+      exhibits: [],
+      history: [{
+        id: "orphan-history",
+        exhibitId: "missing-exhibit",
+        type: "created" as const,
+        occurredAt: timestamp,
+        summary: "Created Exhibit.",
+        details: {},
+      }],
+    }],
+  ])("rejects a backup with an orphan %s", async (_recordType, snapshot) => {
+    await expect(previewCollectionBackup(backupJson(snapshot))).rejects.toBeInstanceOf(BackupValidationError);
+  });
+
+  it("rejects a backup whose Exhibit links to an unknown related Exhibit", async () => {
+    await expect(previewCollectionBackup(backupJson({
+      exhibits: [{ ...exhibit, relatedExhibitIds: ["missing-exhibit"] }],
+    }))).rejects.toBeInstanceOf(BackupValidationError);
+  });
+
+  it.each([
+    ["Exhibit", { exhibits: [exhibit, { ...exhibit, title: "Duplicate Exhibit" }] }],
+    ["artifact", {
+      artifacts: [
+        { id: "duplicate", exhibitId: exhibit.id, kind: "note" as const, label: "First", note: "First note", createdAt: timestamp },
+        { id: "duplicate", exhibitId: exhibit.id, kind: "note" as const, label: "Second", note: "Second note", createdAt: timestamp },
+      ],
+    }],
+    ["history event", {
+      history: [
+        { id: "duplicate", exhibitId: exhibit.id, type: "created" as const, occurredAt: timestamp, summary: "First", details: {} },
+        { id: "duplicate", exhibitId: exhibit.id, type: "edited" as const, occurredAt: timestamp, summary: "Second", details: {} },
+      ],
+    }],
+  ])("rejects a backup with duplicate %s IDs", async (_recordType, snapshot) => {
+    await expect(previewCollectionBackup(backupJson(snapshot))).rejects.toBeInstanceOf(BackupValidationError);
+  });
+
   it("validates the whole restore snapshot before clearing existing repository records", async () => {
     const repository = createRepository("almost-museum-backup-atomic-validation");
     const local = await repository.createExhibit({
@@ -157,6 +235,32 @@ describe("portable collection backups", () => {
       artifacts: [{ id: "broken", exhibitId: local.id, kind: "image", label: "Broken file", createdAt: before.exhibits[0].createdAt }] as never,
       history: [],
     })).rejects.toThrow("Image artifacts must use an image/* MIME type.");
+
+    await expect(repository.getSnapshot()).resolves.toEqual(before);
+  });
+
+  it("rejects an inconsistent restore snapshot without changing existing repository records", async () => {
+    const repository = createRepository("almost-museum-backup-integrity-validation");
+    await repository.createExhibit({
+      title: "Keep this local work",
+      type: "idea",
+      status: "unfinished",
+      museumLabel: "It must survive integrity failure",
+    });
+    const before = await repository.getSnapshot();
+
+    await expect(repository.restoreSnapshot({
+      exhibits: [],
+      artifacts: [{
+        id: "orphan-artifact",
+        exhibitId: "missing-exhibit",
+        kind: "note",
+        label: "Detached note",
+        note: "This artifact has no Exhibit.",
+        createdAt: timestamp,
+      }],
+      history: [],
+    })).rejects.toThrow();
 
     await expect(repository.getSnapshot()).resolves.toEqual(before);
   });

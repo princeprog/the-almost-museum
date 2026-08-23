@@ -74,6 +74,50 @@ export interface MuseumSnapshot {
   history: HistoryEvent[];
 }
 
+function assertUniqueIds(records: ReadonlyArray<{ id: string }>, collection: string): void {
+  const ids = new Set<string>();
+  for (const record of records) {
+    if (ids.has(record.id)) {
+      throw new Error(`The snapshot contains a duplicate ${collection} ID: "${record.id}".`);
+    }
+    ids.add(record.id);
+  }
+}
+
+/** Parses every record and enforces collection-wide identity and reference integrity. */
+export function validateMuseumSnapshot(snapshot: MuseumSnapshot): MuseumSnapshot {
+  const validated = {
+    exhibits: snapshot.exhibits.map((record) => exhibitSchema.parse(record)),
+    artifacts: snapshot.artifacts.map((record) => artifactSchema.parse(record)),
+    history: snapshot.history.map((record) => historyEventSchema.parse(record)),
+  } satisfies MuseumSnapshot;
+
+  assertUniqueIds(validated.exhibits, "Exhibit");
+  assertUniqueIds(validated.artifacts, "artifact");
+  assertUniqueIds(validated.history, "history event");
+
+  const exhibitIds = new Set(validated.exhibits.map(({ id }) => id));
+  for (const artifact of validated.artifacts) {
+    if (!exhibitIds.has(artifact.exhibitId)) {
+      throw new Error(`Artifact "${artifact.id}" references an unknown Exhibit: "${artifact.exhibitId}".`);
+    }
+  }
+  for (const event of validated.history) {
+    if (!exhibitIds.has(event.exhibitId)) {
+      throw new Error(`History event "${event.id}" references an unknown Exhibit: "${event.exhibitId}".`);
+    }
+  }
+  for (const exhibit of validated.exhibits) {
+    for (const relatedExhibitId of exhibit.relatedExhibitIds) {
+      if (!exhibitIds.has(relatedExhibitId)) {
+        throw new Error(`Exhibit "${exhibit.id}" references an unknown related Exhibit: "${relatedExhibitId}".`);
+      }
+    }
+  }
+
+  return validated;
+}
+
 export interface ExhibitInstallation {
   exhibit: Exhibit;
   installed: boolean;
@@ -525,11 +569,7 @@ export class ExhibitRepository {
 
   /** Replaces every persisted collection record in one transaction after validating the full snapshot. */
   async restoreSnapshot(snapshot: MuseumSnapshot): Promise<void> {
-    const validated = {
-      exhibits: snapshot.exhibits.map((record) => exhibitSchema.parse(record)),
-      artifacts: snapshot.artifacts.map((record) => artifactSchema.parse(record)),
-      history: snapshot.history.map((record) => historyEventSchema.parse(record)),
-    } satisfies MuseumSnapshot;
+    const validated = validateMuseumSnapshot(snapshot);
 
     await this.#database.transaction(
       "rw",
