@@ -29,12 +29,12 @@ describe("Almost landing page", () => {
 
     const main = screen.getByRole("main");
     expect(main).toHaveClass("landing-page");
-    expect(main.querySelector(".marketing-hero")).toBeInTheDocument();
-    expect(main.querySelector(".benefit-strip")).toBeInTheDocument();
-    expect(main.querySelector(".exhibit-showcase")).toBeInTheDocument();
-    expect(main.querySelector(".how-it-works")).toBeInTheDocument();
-    expect(main.querySelector(".value-strip")).toBeInTheDocument();
-    expect(container.querySelector(".closing-cta")).toBeInTheDocument();
+    expect(main.querySelectorAll(".landing-screen")).toHaveLength(4);
+    expect(screen.getByRole("region", { name: "Why preserve unfinished work" })).toBeVisible();
+    expect(container.querySelectorAll('[data-slot="card"]')).toHaveLength(5);
+    expect(screen.getByTestId("exhibit-track")).toBeVisible();
+    expect(screen.getByTestId("workflow-track")).toBeVisible();
+    expect(screen.getByTestId("value-track")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Your museum. Your way." })).toBeVisible();
     expect(screen.getByRole("heading", { name: "A calm space for unfinished things." })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Save the work worth remembering." })).toBeVisible();

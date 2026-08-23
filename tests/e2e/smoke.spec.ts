@@ -20,74 +20,97 @@ test("rejects malformed paths without interrupting later clean routes", async ({
   await expect(page.getByRole("textbox", { name: "Working title" })).toBeVisible();
 });
 
-test("keeps the landing experience contained and stacked on a narrow viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/");
+const landingViewports = [
+  { height: 812, name: "phone", tracksScroll: true, width: 375 },
+  { height: 1024, name: "tablet", tracksScroll: true, width: 768 },
+  { height: 900, name: "desktop", tracksScroll: false, width: 1440 },
+  { height: 1080, name: "ultrawide", tracksScroll: false, width: 1920 },
+] as const;
 
-  const frame = page.locator("main.landing-page");
-  const enterMuseum = page.getByRole("link", { name: "Enter the Museum" }).first();
-  const note = page.locator(".marketing-hero__privacy");
+for (const viewport of landingViewports) {
+  test(`keeps all four landing chapters responsive on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/");
 
-  await expect(frame).toBeVisible();
-  await expect(enterMuseum).toBeVisible();
-  await expect(note).toBeVisible();
-  await expect(page.getByRole("link", { name: "New exhibit" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
+    const sections = page.locator(".landing-screen");
+    const enterMuseum = page.getByRole("link", { name: "Enter the Museum" }).first();
+    const viewExhibits = page.getByRole("link", { name: "View all exhibits" });
 
-  const [frameBox, actionBox, noteBox, pageWidth] = await Promise.all([
-    frame.boundingBox(),
-    enterMuseum.boundingBox(),
-    note.boundingBox(),
-    page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, viewportWidth: window.innerWidth })),
-  ]);
+    await expect(sections).toHaveCount(4);
+    await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "New exhibit" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
+    await expect(enterMuseum).toBeVisible();
+    await viewExhibits.scrollIntoViewIfNeeded();
+    await expect(viewExhibits).toBeVisible();
 
-  expect(frameBox).not.toBeNull();
-  expect(actionBox).not.toBeNull();
-  expect(noteBox).not.toBeNull();
-  expect(pageWidth.scrollWidth).toBeLessThanOrEqual(pageWidth.viewportWidth);
-  expect(frameBox!.x).toBeGreaterThanOrEqual(0);
-  expect(frameBox!.x + frameBox!.width).toBeLessThanOrEqual(pageWidth.viewportWidth);
-  expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(pageWidth.viewportWidth);
-  expect(noteBox!.y).toBeGreaterThan(actionBox!.y + actionBox!.height);
-});
+    const landingImages = page.locator("main.landing-page img");
+    for (let index = 0; index < await landingImages.count(); index += 1) {
+      await landingImages.nth(index).scrollIntoViewIfNeeded();
+      await expect(landingImages.nth(index)).toHaveJSProperty("complete", true);
+    }
 
-test("uses the available width on a large desktop viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.goto("/");
-
-  const [headerBox, landingBox, pageWidth] = await Promise.all([
-    page.locator(".site-header").boundingBox(),
-    page.locator("main.landing-page").boundingBox(),
-    page.evaluate(() => ({
+    const layout = await page.evaluate(() => ({
+      imageWidths: Array.from(document.querySelectorAll("main.landing-page img")).map((image) => ({
+        clientWidth: image.getBoundingClientRect().width,
+        naturalWidth: (image as HTMLImageElement).naturalWidth,
+      })),
+      sectionHeights: Array.from(document.querySelectorAll(".landing-screen")).map(
+        (section) => section.getBoundingClientRect().height,
+      ),
       scrollWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
-    })),
-  ]);
+    }));
 
-  expect(headerBox).not.toBeNull();
-  expect(landingBox).not.toBeNull();
-  expect(headerBox!.x).toBeLessThanOrEqual(24);
-  expect(landingBox!.x).toBeLessThanOrEqual(24);
-  expect(headerBox!.width).toBeGreaterThan(1840);
-  expect(landingBox!.width).toBeGreaterThan(1840);
-  expect(pageWidth.scrollWidth).toBeLessThanOrEqual(pageWidth.viewportWidth);
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(layout.imageWidths.every((image) => image.clientWidth > 0 && image.naturalWidth > 0)).toBe(true);
+    for (const height of layout.sectionHeights) {
+      expect(height).toBeGreaterThanOrEqual(viewport.height - 1);
+    }
+
+    for (const testId of ["exhibit-track", "workflow-track", "value-track"]) {
+      const track = page.getByTestId(testId);
+      const dimensions = await track.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+
+      if (viewport.tracksScroll) {
+        expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
+      } else {
+        expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+      }
+    }
+  });
+}
+
+test("keeps landing navigation, skip focus, and CTA destinations functional", async ({ page }) => {
+  await page.goto("/");
+
+  const ctas = page.getByRole("link", { name: /Enter the Museum|View all exhibits|View more exhibits/ });
+  const hrefs = await ctas.evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+  expect(hrefs).not.toHaveLength(0);
+  expect(hrefs.every((href) => href === "/museum")).toBe(true);
+
+  const skipLink = page.getByRole("link", { name: "Skip to content" });
+  await skipLink.focus();
+  await expect(skipLink).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#app-root")).toBeFocused();
 });
 
-test("presents the landing story as device-sized sections", async ({ page }) => {
+test("disables landing scroll snapping for reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
 
-  const sections = page.locator(".landing-screen");
-  await expect(sections).toHaveCount(4);
+  const motion = await page.evaluate(() => ({
+    scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
+    scrollSnapType: getComputedStyle(document.documentElement).scrollSnapType,
+  }));
 
-  const heights = await sections.evaluateAll((elements) =>
-    elements.map((element) => element.getBoundingClientRect().height),
-  );
-
-  expect(heights[0]).toBeGreaterThanOrEqual(820);
-  for (const height of heights.slice(1)) {
-    expect(height).toBeGreaterThanOrEqual(895);
-  }
+  expect(motion.scrollBehavior).toBe("auto");
+  expect(motion.scrollSnapType).toBe("none");
 });
 
 test("captures an Exhibit through the exported clean routes", async ({ page }) => {
