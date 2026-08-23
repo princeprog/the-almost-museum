@@ -1,83 +1,85 @@
-# Almost Museum landing design QA
+# Almost Museum full-screen sections design QA
 
 ## Comparison target
 
 - Source visual truth: `outputs/almost-museum-landing-reference-v2.png`
-- Large-screen regression evidence: `C:/Users/ALPRIN~1/AppData/Local/Temp/codex-clipboard-4e4db5e6-358b-4b3f-b0e9-a64379ce1756.png`
-- Browser-rendered implementation captures: `outputs/almost-museum-final-mobile-share.png`, `outputs/almost-museum-responsive-wide.png`, and `outputs/almost-museum-responsive-phone.png`
-- Route and state: `/`, default desktop state
-- Reference and implementation viewport: 968 x 1625 CSS px
-- Responsive verification viewports: 1920 x 1080 and 375 x 812 CSS px at device scale factor 1
-- Pixel evidence: source and implementation are 968 x 1625 for the fidelity check; the wide regression source is 1920 x 1080 including Brave chrome, while the app-owned in-browser capture is 1862 x 1072 from a 1920 x 1080 CSS viewport; the phone capture is 360 x 780 from a 375 x 812 CSS viewport after browser-scrollbar exclusion
-- Density normalization: all browser captures use device scale factor 1; wide comparison ignores browser chrome and judges the app-owned content region plus measured DOM geometry
-- Comparison method: reference and live in-app-browser capture were inspected together at identical dimensions after every pass
-- Final document geometry: 968 x 1625, with no horizontal or vertical overflow at the reference viewport
+- User-reported wide-screen regression: `C:/Users/ALPRIN~1/AppData/Local/Temp/codex-clipboard-4e4db5e6-358b-4b3f-b0e9-a64379ce1756.png`
+- Final implementation captures: `outputs/almost-museum-fullscreen-desktop.png`, `outputs/almost-museum-fullscreen-section-2.png`, `outputs/almost-museum-fullscreen-section-3.png`, `outputs/almost-museum-fullscreen-section-4.png`, and `outputs/almost-museum-fullscreen-phone.png`
+- Route and state: `/`, default public landing state
+- Desktop CSS viewport: 1440 x 900 at device scale factor 1
+- Phone CSS viewport: 375 x 812 at device scale factor 1
+- Captured pixels: desktop captures are 1425 x 891 after browser scrollbar exclusion; the phone capture is 360 x 780 after browser chrome and scrollbar exclusion
+- Density normalization: all implementation captures use device scale factor 1. The reference remains the source for visual language and content; the four-screen composition is an intentional layout change requested after the source was implemented.
 
-## Final geometry
+## Screen geometry
 
-| Section | Top | Height |
+At 1440 x 900, the landing canvas is 1383 px wide at x=21 with no horizontal document overflow.
+
+| Screen | Top | Height |
 | --- | ---: | ---: |
-| Header | 20.0 px | 58.4 px |
-| Hero | 78.4 px | 444.0 px |
-| Benefit strip | 522.4 px | 120.8 px |
-| Exhibit gallery | 643.2 px | 390.6 px |
-| How it works | 1033.8 px | 261.6 px |
-| Value strip | 1295.3 px | 99.2 px |
-| Closing CTA | 1406.5 px | 166.8 px |
-| Footer | 1573.4 px | 50.4 px |
+| Hero | 78.4 px | 821.6 px |
+| Collection | 900.0 px | 900.0 px |
+| Process | 1800.0 px | 900.0 px |
+| Closing invitation | 2700.0 px | 900.0 px |
+
+At 375 x 812, the first three screens are 812 px tall and the closing screen is 822.4 px tall so its footer remains readable. The document scroll width is 360 px against a 375 px viewport, with no page-level horizontal overflow.
+
+## Full-view comparison evidence
+
+- The source and all four final desktop captures were opened together in one comparison input.
+- The original blue-gray hero, off-white gallery, quiet white process area, pale value strip, and dark doorway CTA remain visually consistent with the source.
+- The requested change is visible as four deliberate device-sized chapters instead of one compressed poster-like canvas.
+- Desktop proximity snapping aligns each chapter to the viewport without trapping natural scrolling.
+
+## Focused comparison evidence
+
+- Hero: `outputs/almost-museum-fullscreen-desktop.png` preserves the source headline hierarchy, architectural asset crop, privacy note, and primary/secondary actions while using the full device height.
+- Collection: `outputs/almost-museum-fullscreen-section-2.png` combines the four benefits with the five exhibit cards into one complete viewport and keeps every card image sharp and proportionate.
+- Process: `outputs/almost-museum-fullscreen-section-3.png` retains the four-step timeline and value band, with intentional negative space supporting the calm museum tone.
+- Closing: `outputs/almost-museum-fullscreen-section-4.png` gives the doorway asset a full-screen cinematic treatment while keeping the CTA readable against the dark field.
+- Phone: `outputs/almost-museum-fullscreen-phone.png` confirms readable hero copy, visible actions, contained artwork, and no horizontal page overflow. Collection, workflow, and value content use touch-friendly horizontal tracks with hidden native scrollbars and visible next-card peeking.
 
 ## Comparison history
 
-### Pass 1 - structure
+### Pass 1 - full-width correction
 
-- The header, hero, and benefit strip already aligned with the source, but the first implementation extended to 1695 px.
-- Measured excess: gallery 26 px, workflow 28 px, and closing CTA 16 px.
-- Corrected the gallery bottom rhythm, workflow content footprint, and CTA bottom padding without changing the aligned card and text baselines.
+- Earlier P2: a 76rem maximum width created the reported website-inside-a-website frame on wide displays.
+- Fix: removed the outer maximum width and retained the intended 20 px desktop edge margin.
+- Evidence: the landing canvas uses the available width at 1920 x 1080 with no horizontal overflow.
 
-### Pass 2 - typography and spacing
+### Pass 2 - screen-sized chapter structure
 
-- Shifted the hero eyebrow and headline to the source baselines while retaining the aligned supporting copy and privacy note.
-- Corrected gallery media proportions from a shallow 1.24 ratio to the taller source treatment and increased metadata-to-media spacing.
-- Tightened the workflow heading and description spacing so the illustration and step timeline align with the source.
+- P2: the source composition used several short bands, so expanding them independently to 100vh would have produced oversized utility strips and weak hierarchy.
+- Fix: grouped the page into four narrative chapters: hero, collection, process, and closing invitation. Each desktop chapter measures one viewport, with the first accounting for the header.
+- Evidence: measured desktop chapter heights are 821.6, 900, 900, and 900 px at a 900 px viewport.
 
-### Pass 3 - visual polish
+### Pass 3 - responsive scale and mobile polish
 
-- Repositioned and resized the glowing doorway composition for the source CTA balance while keeping the left copy field dark and uncluttered.
-- Confirmed generated hero, gallery, workflow, and doorway assets are sharp, intentional, and correctly cropped in their measured slots.
-- Final capture matches the 968 x 1625 reference canvas exactly, with section boundaries within approximately 0-2 px of the source.
+- P2: the original fixed small type became undersized when sections expanded across large monitors; phone horizontal content initially exposed native scrollbars.
+- Fix: added restrained large-screen fluid typography, bounded card heights, compact phone benefit tiles, horizontal workflow/value tracks, touch containment, and hidden native scrollbars.
+- Evidence: desktop hierarchy remains balanced at 1440 x 900, while all four phone chapters are at least 812 px tall and the document remains overflow-free.
 
-### Pass 4 - full-width responsiveness
+## Required fidelity surfaces
 
-- Earlier P2 finding: at 1920 x 1080, a `76rem` media-query cap held the header and landing canvas to 1216 px, leaving approximately 350 px of empty space on both sides and creating the reported website-inside-a-website effect.
-- Fix: removed the large-screen max-width override while preserving the original 20 px desktop edge margin and the existing phone breakpoint behavior.
-- Post-fix evidence: at 1920 x 1080, the header and landing canvas now start at x=20 and measure 1865 px wide; the document has no horizontal overflow. At 968 x 1625, the original reference geometry remains 928 px wide at x=20 and the full document remains exactly 1625 px tall.
+- Fonts and typography: the Inter-based hierarchy, weights, wrapping, and letter spacing remain source-aligned; large screens receive fluid scaling while phone sizes remain compact and readable.
+- Spacing and layout rhythm: every chapter occupies the device height, major content is vertically composed rather than stretched, and mobile tracks preserve clear gutters and partial-card affordances.
+- Colors and visual tokens: blue-gray hero, warm gallery, white process field, pale value strip, and navy closing treatment remain unchanged from the supplied art direction.
+- Image quality and asset fidelity: all supplied raster assets use Next Image, preserve their intended subject and crop, and remain sharp at the larger section sizes.
+- Copy and content: all source headlines, descriptions, dates, statuses, labels, navigation items, and calls to action remain present.
 
-## Full-view and focused comparison evidence
+## Interaction and accessibility checks
 
-- Full-view: the original 968 x 1625 reference and revised implementation were compared together after the responsive change. Typography, section boundaries, imagery, colors, and copy remain unchanged at the source viewport.
-- Large-screen focus: the user-provided 1920 x 1080 regression screenshot and the revised 1920 x 1080 implementation were inspected together. The centered 1216 px frame is removed and both primary surfaces now use the available device width.
-- Phone focus: the 375 x 812 header, hero copy, CTA, and hero artwork were inspected at readable scale. The app canvas measures 336 px at x=12 with no horizontal overflow.
-- No additional focused asset crops were needed because this iteration changes only the outer responsive constraint; existing asset crops and typography were not modified.
+- Header navigation and both Enter the Museum actions retain their destinations.
+- Learn more still targets the process section and benefits from smooth scrolling.
+- Desktop uses proximity scroll snapping; mobile disables page snapping so longer content never traps the user.
+- Phone gallery, workflow, and values remain horizontally swipeable without creating document overflow.
+- Browser console inspection returned no errors.
+- Focused browser coverage passed in Chromium, Firefox, and WebKit.
 
-## Content and interaction checks
+## Findings
 
-- All supplied landing copy, dates, statuses, exhibit labels, value statements, and footer language are present.
-- Header navigation retains working routes for Museum, New exhibit, and Settings.
-- Both Enter the Museum actions navigate to `/museum`.
-- Learn more updates the URL to `#how-it-works`; View all exhibits navigates to `/museum`.
-- The skip link remains the first keyboard focus target and the page has one accessible main landmark.
-- Desktop renders without overflow at both 968 and 1920 px; the 375 x 812 responsive check also has no horizontal overflow and keeps the full navigation and CTA visible.
-
-## React quality review
-
-- Landing sections are static server components with module-level data; no unnecessary client boundary, effects, or state were introduced.
-- Next Image is used for every raster asset, with explicit responsive sizing and meaningful alt text where the visual carries content.
-- Repeated benefits, exhibits, workflow steps, and values use stable keys and focused component boundaries.
-- Existing shared Button and MuseumShell primitives are retained.
-
-## Remaining differences
-
-- P3 only: minute font rasterization, noise, and icon-stroke differences remain because the source is a compressed screenshot while the implementation uses live type and the project icon system.
+- No actionable P0, P1, or P2 findings remain.
+- P3: the process chapter intentionally uses generous negative space. This supports the product's quiet positioning and can be tightened later if a denser presentation is preferred.
 
 ## Result
 

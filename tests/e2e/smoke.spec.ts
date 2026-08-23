@@ -73,6 +73,23 @@ test("uses the available width on a large desktop viewport", async ({ page }) =>
   expect(pageWidth.scrollWidth).toBeLessThanOrEqual(pageWidth.viewportWidth);
 });
 
+test("presents the landing story as device-sized sections", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const sections = page.locator(".landing-screen");
+  await expect(sections).toHaveCount(4);
+
+  const heights = await sections.evaluateAll((elements) =>
+    elements.map((element) => element.getBoundingClientRect().height),
+  );
+
+  expect(heights[0]).toBeGreaterThanOrEqual(820);
+  for (const height of heights.slice(1)) {
+    expect(height).toBeGreaterThanOrEqual(895);
+  }
+});
+
 test("captures an Exhibit through the exported clean routes", async ({ page }) => {
   await openHydratedCapture(page);
 

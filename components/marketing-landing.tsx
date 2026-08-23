@@ -333,13 +333,21 @@ function LandingFooter() {
 export function MarketingLanding() {
   return (
     <main className="landing-page">
-      <HeroSection />
-      <BenefitStrip />
-      <ExhibitGallery />
-      <HowItWorks />
-      <ValueStrip />
-      <ClosingCallToAction />
-      <LandingFooter />
+      <div className="landing-screen landing-screen--hero">
+        <HeroSection />
+      </div>
+      <div className="landing-screen landing-screen--collection">
+        <BenefitStrip />
+        <ExhibitGallery />
+      </div>
+      <div className="landing-screen landing-screen--process">
+        <HowItWorks />
+        <ValueStrip />
+      </div>
+      <div className="landing-screen landing-screen--closing">
+        <ClosingCallToAction />
+        <LandingFooter />
+      </div>
     </main>
   );
 }
