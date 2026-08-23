@@ -14,6 +14,8 @@ The MVP is a frontend-only Next.js application. There are no API routes, account
 
 No verified production URL has been recorded yet. After a Vercel production deployment has completed and its domain has been checked, replace this note with that exact HTTPS URL. Do not treat a preview URL as the production address.
 
+The Vercel project `the-almost-museum` is connected to `princeprog/the-almost-museum` and deploys from `main`. The static export uses `vercel.json` to preserve the extensionless App Router routes on Vercel. The exact production URL will be recorded here only after the connected deployment and its PWA behavior are verified.
+
 ## Run locally
 
 Prerequisites:
