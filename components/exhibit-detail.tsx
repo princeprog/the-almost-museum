@@ -135,6 +135,8 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   const [query, setQuery] = useState(search);
   const exhibitId = useMemo(() => readRequestedId(query), [query]);
   const requestVersion = useRef(0);
+  const exhibitHeadingRef = useRef<HTMLHeadingElement>(null);
+  const shouldRestoreClosureFocusRef = useRef(false);
   const [exhibit, setExhibit] = useState<Exhibit>();
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [history, setHistory] = useState<HistoryEvent[]>([]);
@@ -452,6 +454,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
         });
       setExhibit(updated);
       setFormValues(updated);
+      shouldRestoreClosureFocusRef.current = true;
       setClosureAction(undefined);
       reportMessage(closureAction === "transform" ? "This Exhibit has been transformed and linked." : `${closureLabels[closureAction]} ceremony recorded.`);
       void refreshTimeline(updated.id);
@@ -489,7 +492,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       <header className="exhibit-detail__header">
         <div>
           <p className="museum-eyebrow">{formatLabel(exhibit.type)} / {formatLabel(exhibit.status)}</p>
-          <h1>{exhibit.title}</h1>
+          <h1 ref={exhibitHeadingRef} tabIndex={-1}>{exhibit.title}</h1>
           <p>{exhibit.museumLabel}</p>
         </div>
         <div className="exhibit-detail__actions">
@@ -545,6 +548,8 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
             : "This records a new status change in the Exhibit timeline."}
           isOpen
           onOpenChange={(isOpen) => { if (!isOpen) closeClosureDialog(); }}
+          restoreFocusRef={exhibitHeadingRef}
+          shouldRestoreFocusRef={shouldRestoreClosureFocusRef}
           title={closureDialogTitles[closureAction]}
         >
           <div className="exhibit-detail__closure-dialog">

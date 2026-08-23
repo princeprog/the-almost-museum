@@ -3,16 +3,20 @@
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 
+type FocusRef<T> = { current: T };
+
 type DialogProps = {
   "aria-describedby"?: string;
   children: ReactNode;
   description?: string;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  restoreFocusRef?: FocusRef<HTMLElement | null>;
+  shouldRestoreFocusRef?: FocusRef<boolean>;
   title: string;
 };
 
-export function Dialog({ "aria-describedby": ariaDescribedBy, children, description, isOpen, onOpenChange, title }: Readonly<DialogProps>) {
+export function Dialog({ "aria-describedby": ariaDescribedBy, children, description, isOpen, onOpenChange, restoreFocusRef, shouldRestoreFocusRef, title }: Readonly<DialogProps>) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -21,11 +25,17 @@ export function Dialog({ "aria-describedby": ariaDescribedBy, children, descript
     if (!isOpen) return;
 
     const previousElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const restoreFocusTarget = restoreFocusRef?.current;
     dialogRef.current?.focus();
     return () => {
+      if (shouldRestoreFocusRef?.current) {
+        shouldRestoreFocusRef.current = false;
+        restoreFocusTarget?.focus();
+        return;
+      }
       previousElement?.focus();
     };
-  }, [isOpen]);
+  }, [isOpen, restoreFocusRef, shouldRestoreFocusRef]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {

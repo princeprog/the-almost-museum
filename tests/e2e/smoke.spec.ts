@@ -83,6 +83,22 @@ test("captures an Exhibit through the exported clean routes", async ({ page }) =
   await expect(page.getByRole("heading", { name: "Exhibit" })).toBeVisible();
 });
 
+test("moves focus to the surviving Exhibit heading after a closure replaces its trigger", async ({ page }) => {
+  await page.goto("/exhibit/new");
+
+  await page.getByRole("textbox", { name: "Working title" }).fill("Focus restoration study");
+  await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
+  await page.getByRole("button", { name: "Continue to evidence" }).click();
+  await page.getByRole("button", { name: "Continue to story" }).click();
+  await page.getByRole("textbox", { name: "Museum label" }).fill("A safe return after closure");
+  await page.getByRole("button", { name: "Save Exhibit" }).click();
+
+  await page.getByRole("button", { name: "Move to Archive" }).click();
+  await page.getByRole("button", { name: "Archive Exhibit" }).click();
+
+  await expect(page.getByRole("heading", { name: "Focus restoration study" })).toBeFocused();
+});
+
 test("keeps the capture form inside a narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/exhibit/new");

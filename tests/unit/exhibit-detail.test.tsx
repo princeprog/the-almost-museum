@@ -342,6 +342,23 @@ describe("ExhibitDetail", () => {
     expect(await screen.findByText("This Exhibit was archived.")).toBeVisible();
   });
 
+  it("moves focus to the surviving Exhibit heading when a completed closure removes its dialog trigger", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-detail-closure-focus");
+    const exhibit = await createExhibit(repository);
+
+    render(<ExhibitDetail repository={repository} search={`?id=${exhibit.id}`} />);
+    await screen.findByRole("heading", { name: "Harbor Queue" });
+
+    await user.click(screen.getByRole("button", { name: "Move to Archive" }));
+    await user.click(screen.getByRole("button", { name: "Archive Exhibit" }));
+
+    await waitFor(async () => expect((await repository.getExhibit(exhibit.id))?.status).toBe("archived"));
+    const heading = screen.getByRole("heading", { name: "Harbor Queue" });
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
   it("transforms into a new Exhibit with reciprocal links and a refreshed source timeline", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-detail-transform-new");
