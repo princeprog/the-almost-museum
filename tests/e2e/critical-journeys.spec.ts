@@ -1,5 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
+// Playwright provisions a new browser context and IndexedDB namespace per test.
+// An explicit empty storage state also keeps local UI preferences out of parallel runs.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 type ExhibitInput = {
   label?: string;
   tags?: string;
@@ -8,6 +12,11 @@ type ExhibitInput = {
   withArtifacts?: boolean;
 };
 
+async function openHydratedCapture(page: Page): Promise<void> {
+  await page.goto("/exhibit/new");
+  await expect(page.locator("main.exhibit-capture")).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+}
+
 async function captureExhibit(page: Page, {
   label = "A small record of work in progress",
   tags = "Harbor, Research",
@@ -15,11 +24,7 @@ async function captureExhibit(page: Page, {
   type = "project",
   withArtifacts = false,
 }: ExhibitInput): Promise<string> {
-  await page.goto("/exhibit/new");
-  // The exported static page renders form controls before its React handlers hydrate.
-  // Waiting for a short settled frame prevents a pre-hydration browser edit from being
-  // replaced by the initial React state on slower engines such as WebKit.
-  await page.waitForTimeout(500);
+  await openHydratedCapture(page);
   await page.getByRole("textbox", { name: "Working title" }).fill(title);
   await page.getByRole("combobox", { name: "Exhibit type" }).selectOption(type);
   await page.getByRole("textbox", { name: "Tags" }).fill(tags);
@@ -29,15 +34,17 @@ async function captureExhibit(page: Page, {
     await page.getByRole("textbox", { name: "Link label" }).fill("Reference sketch");
     await page.getByRole("textbox", { name: "Link address" }).fill("https://example.test/sketch");
     await page.getByRole("button", { name: "Add link" }).click();
+    await expect(page.getByRole("list", { name: "Evidence waiting to be saved" })).toContainText("Reference sketch");
     await page.getByRole("textbox", { name: "Note label" }).fill("Curator note");
     await page.getByRole("textbox", { name: "Note", exact: true }).fill("Keep the small decision visible.");
     await page.getByRole("button", { name: "Add note" }).click();
+    await expect(page.getByRole("list", { name: "Evidence waiting to be saved" })).toContainText("Curator note");
   }
 
   await page.getByRole("button", { name: "Continue to story" }).click();
   await page.getByRole("textbox", { name: "Museum label" }).fill(label);
   await page.getByRole("button", { name: "Save Exhibit" }).click();
-  await expect(page).toHaveURL(/\/exhibit\?id=/);
+  await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 15_000 });
 
   const id = new URL(page.url()).searchParams.get("id");
   expect(id).not.toBeNull();
@@ -99,12 +106,15 @@ test("captures, edits, and maintains Exhibit artifacts after reopening the colle
   await page.reload();
   await expect(page.getByRole("heading", { name: "Harbor wayfinding study, revised" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Reference sketch" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Curator note" })).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "Exhibit tags" })).toContainText("Revised");
+  await expect(page.getByRole("list", { name: "Exhibit tags" })).not.toContainText("Wayfinding");
   await page.goto("/museum");
   await expect(page.getByRole("link", { name: "Harbor wayfinding study, revised" })).toHaveAttribute("href", `/exhibit?id=${id}`);
 });
 
 test("persists a local file artifact through a Chromium browser reopen", async ({ browserName, page }) => {
-  test.skip(browserName !== "chromium", "Playwright WebKit on Windows does not settle Dexie Blob write transactions.");
+  test.skip(browserName === "webkit", "Playwright WebKit on Windows does not settle Dexie Blob write transactions.");
   await captureExhibit(page, { title: "Local artifact fixture" });
   await page.getByLabel("Image, PDF, or audio").setInputFiles({
     name: "harbor.png",
@@ -140,8 +150,21 @@ test("filters and searches the gallery across rooms, type, status, and tags", as
   await expect(page.getByRole("list", { name: "Exhibits" })).toContainText("Quiet archive draft");
   await page.getByRole("searchbox", { name: "Search collection" }).fill("missing");
   await expect(page.getByRole("heading", { name: "Nothing is hidden here." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Archive", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("searchbox", { name: "Search collection" })).toHaveValue("missing");
+  await expect(page.getByRole("combobox", { name: "Exhibit type" })).toHaveValue("all");
+  await expect(page.getByRole("combobox", { name: "Status" })).toHaveValue("archived");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveValue("all");
+  await expect(page.getByRole("link", { name: "Quiet archive draft" })).toHaveCount(0);
+  await expect(page.getByRole("status", { name: "Gallery result count" })).toHaveText("0 exhibits in Archive");
   await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByRole("button", { name: "Lobby", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("searchbox", { name: "Search collection" })).toHaveValue("");
+  await expect(page.getByRole("combobox", { name: "Exhibit type" })).toHaveValue("all");
+  await expect(page.getByRole("combobox", { name: "Status" })).toHaveValue("all");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveValue("all");
   await expect(page.getByRole("link", { name: "Quiet archive draft" })).toBeVisible();
+  await expect(page.getByRole("status", { name: "Gallery result count" })).toHaveText("2 exhibits in Lobby");
 });
 
 test("records archive, complete, release, and revive closure ceremonies", async ({ page }) => {
@@ -223,7 +246,10 @@ test("exports, previews, restores, and rejects backups without overwriting the c
   await page.getByLabel("Choose backup file").setInputFiles({ name: "not-a-backup.json", mimeType: "application/json", buffer: Buffer.from('{"format":"elsewhere"}') });
   await expect(page.getByText("Choose a valid version 1 Almost Museum JSON backup.", { exact: true })).toBeVisible();
   await page.goto("/museum");
-  await expect(page.getByRole("link", { name: "Backup fixture" })).toBeVisible();
+  await page.getByRole("link", { name: "Backup fixture" }).click();
+  await expect(page.getByRole("link", { name: "Reference sketch" })).toHaveAttribute("href", "https://example.test/sketch");
+  await expect(page.getByRole("heading", { name: "Curator note" })).toBeVisible();
+  await expect(page.getByText("Keep the small decision visible.")).toBeVisible();
 });
 
 test("keeps gallery, capture, detail, and settings layouts inside a narrow viewport", async ({ page }) => {

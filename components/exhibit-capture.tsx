@@ -78,6 +78,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   const [quotaWarning, setQuotaWarning] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const previewUrls = useRef(new Set<string>());
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +87,10 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     previewUrls.current.clear();
     if (suppliedRepository === undefined) repository.close();
   }, [repository, suppliedRepository]);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   useEffect(() => {
     if (errors.length > 0) errorSummaryRef.current?.focus();
@@ -256,7 +261,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   }
 
   return (
-    <main className="exhibit-capture">
+    <main aria-busy={!isHydrated} className="exhibit-capture">
       <header className="exhibit-capture__header">
         <p className="museum-eyebrow">New Exhibit</p>
         <h1>{step === 1 ? "Give the work a place" : step === 2 ? "Keep a trace of it" : "Tell its story"}</h1>

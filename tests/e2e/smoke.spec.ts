@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+async function openHydratedCapture(page: import("@playwright/test").Page): Promise<void> {
+  await page.goto("/exhibit/new");
+  await expect(page.locator("main.exhibit-capture")).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+}
+
 test("serves the exported museum landing page", async ({ page }) => {
   await page.goto("/");
 
@@ -45,8 +50,7 @@ test("keeps the landing experience contained and stacked on a narrow viewport", 
 });
 
 test("captures an Exhibit through the exported clean routes", async ({ page }) => {
-  await page.goto("/exhibit/new");
-  await page.waitForTimeout(500);
+  await openHydratedCapture(page);
 
   await page.getByRole("textbox", { name: "Working title" }).fill("Harbor wayfinding study");
   await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
@@ -60,8 +64,7 @@ test("captures an Exhibit through the exported clean routes", async ({ page }) =
 });
 
 test("moves focus to the surviving Exhibit heading after a closure replaces its trigger", async ({ page }) => {
-  await page.goto("/exhibit/new");
-  await page.waitForTimeout(500);
+  await openHydratedCapture(page);
 
   await page.getByRole("textbox", { name: "Working title" }).fill("Focus restoration study");
   await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
@@ -78,8 +81,7 @@ test("moves focus to the surviving Exhibit heading after a closure replaces its 
 
 test("keeps the capture form inside a narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/exhibit/new");
-  await page.waitForTimeout(500);
+  await openHydratedCapture(page);
 
   await expect(page.getByRole("textbox", { name: "Working title" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue to evidence" })).toBeVisible();
