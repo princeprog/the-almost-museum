@@ -19,6 +19,8 @@ test("ships a manifest, generated icons, offline fallback, and a production serv
   await page.goto("/offline");
   await expect(page.getByRole("heading", { name: "You can still visit the Museum." })).toBeVisible();
   await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration("/"))?.active?.scriptURL.endsWith("/sw.js") ?? false)).toBe(true);
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.endsWith("/sw.js") ?? false)).toBe(true);
 
   await context.setOffline(true);
   await page.goto("/a-new-route-while-offline");

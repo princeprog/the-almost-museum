@@ -53,6 +53,14 @@ beforeEach(() => {
 });
 
 describe("ExhibitCapture", () => {
+  it("marks the capture form ready after client hydration", async () => {
+    const repository = createRepository("almost-museum-capture-hydration");
+
+    render(<ExhibitCapture repository={repository} />);
+
+    await waitFor(() => expect(screen.getByRole("main")).toHaveAttribute("aria-busy", "false"));
+  });
+
   it("keeps an incomplete identity step in place and explains the required fields", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-capture-validation");
