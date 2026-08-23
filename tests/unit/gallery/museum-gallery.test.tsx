@@ -1,7 +1,7 @@
 import Dexie from "dexie";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MuseumGallery } from "@/components/museum-gallery";
 import { ExhibitRepository } from "@/lib/persistence";
@@ -109,5 +109,22 @@ describe("MuseumGallery", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Show grid view" })).toBeVisible());
     expect(screen.getByRole("combobox", { name: "Sort collection" })).toHaveValue("title-asc");
     expect(screen.getByRole("list", { name: "Exhibits" })).toHaveClass("museum-gallery__cards--list");
+  });
+
+  it("explains a failed local read and lets a visitor retry the collection", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-gallery-retry");
+    await seedCollection(repository);
+    const listExhibits = repository.listExhibits.bind(repository);
+    vi.spyOn(repository, "listExhibits")
+      .mockRejectedValueOnce(new Error("IndexedDB temporarily unavailable"))
+      .mockImplementation(listExhibits);
+
+    render(<MuseumGallery repository={repository} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your collection could not be opened.");
+    await user.click(screen.getByRole("button", { name: "Try opening collection again" }));
+
+    expect(await screen.findByRole("heading", { name: "Lobby" })).toBeVisible();
   });
 });

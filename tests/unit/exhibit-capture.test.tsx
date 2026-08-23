@@ -66,6 +66,18 @@ describe("ExhibitCapture", () => {
     expect(screen.getByText("Choose an Exhibit type before continuing.")).toBeVisible();
   });
 
+  it("moves keyboard focus to an assertive validation summary when a step cannot continue", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-capture-validation-focus");
+
+    render(<ExhibitCapture repository={repository} />);
+    await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
+
+    const summary = screen.getByRole("alert");
+    expect(summary).toHaveFocus();
+    expect(summary).toHaveTextContent("Add a title before continuing.");
+  });
+
   it("keeps a missing initial status in the identity step even though the form starts unfinished", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-capture-status-validation");

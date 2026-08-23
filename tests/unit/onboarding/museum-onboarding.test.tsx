@@ -1,7 +1,7 @@
 import Dexie from "dexie";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MuseumOnboarding } from "@/components/museum-onboarding";
 import { ExhibitRepository } from "@/lib/persistence";
@@ -47,5 +47,21 @@ describe("MuseumOnboarding", () => {
       expect(screen.getByText(HARBOR_QUEUE_DEMO_TITLE)).toBeVisible();
     });
     await expect(repository.listExhibits()).resolves.toHaveLength(1);
+  });
+
+  it("provides a safe retry when the initial local collection read fails", async () => {
+    const user = userEvent.setup();
+    const repository = createRepository("almost-museum-client-onboarding-retry");
+    const listExhibits = repository.listExhibits.bind(repository);
+    vi.spyOn(repository, "listExhibits")
+      .mockRejectedValueOnce(new Error("IndexedDB temporarily unavailable"))
+      .mockImplementation(listExhibits);
+
+    render(<MuseumOnboarding repository={repository} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your collection could not be opened.");
+    await user.click(screen.getByRole("button", { name: "Try opening collection again" }));
+
+    expect(await screen.findByRole("button", { name: "Install Harbor Queue demo" })).toBeVisible();
   });
 });
