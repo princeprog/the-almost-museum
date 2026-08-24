@@ -8,7 +8,6 @@ import {
   Circle,
   Clock3,
   Folder,
-  GalleryVerticalEnd,
   Heart,
   History,
   Leaf,
@@ -24,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -349,10 +349,10 @@ function ExhibitGallery() {
         {exhibits.map((exhibit) => (
           <Card className="h-full min-h-[27rem] min-w-0 snap-start py-3 xl:min-h-0" key={exhibit.number}>
             <CardHeader className="gap-0 px-3">
-              <div className="flex items-center justify-between text-[0.65rem] font-medium tracking-wide text-landing-muted uppercase">
-                <span>{exhibit.category}</span>
-                <span>{exhibit.number}</span>
-              </div>
+              <CardDescription className="text-[0.65rem] font-medium tracking-wide text-landing-muted uppercase">
+                {exhibit.category}
+              </CardDescription>
+              <CardAction className="text-[0.65rem] font-medium tracking-wide text-landing-muted">{exhibit.number}</CardAction>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-4 px-3">
               <div className="relative aspect-[1.15] min-h-40 overflow-hidden rounded-lg bg-landing-image">
@@ -501,7 +501,7 @@ function ClosingCallToAction() {
 function LandingFooter() {
   return (
     <footer className="grid min-h-16 grid-cols-[auto_1fr] items-center gap-3 px-5 py-4 text-landing-muted sm:grid-cols-[1fr_auto_1fr] sm:px-8">
-      <GalleryVerticalEnd aria-label="Almost Museum" className="size-6 text-landing-ink" />
+      <Image alt="Almost Museum" className="size-6 rounded-md object-contain" height={24} src="/brand/almost-museum-mark.png" width={24} />
       <p className="text-xs sm:text-center">Almost Museum is a local-first application. No accounts. No cloud. Just you and your work.</p>
       <p className="col-start-2 text-xs sm:col-start-auto sm:justify-self-end">© 2024 Almost Museum</p>
     </footer>

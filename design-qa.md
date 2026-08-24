@@ -18,10 +18,12 @@
   - `outputs/shadcn-settings-desktop-2026-08-24.png`
 - The approved four-chapter landing composition, imagery, copy, and local-first positioning remain intact.
 - The phone and desktop captures confirm responsive full-device layouts, consistent typography, visible sticky navigation, contained forms, and no nested-website frame.
+- The generated Almost Museum mark is used in the shared wordmark, landing footer, and `/icon.png` favicon metadata.
 
 ## Component and interaction checks
 
 - Museum gallery: Card, Badge, ToggleGroup, Select, Field, Alert, Skeleton, and Empty states verified.
+- Landing exhibit showcase: official Card, CardHeader, CardDescription, CardAction, CardContent, CardFooter, and Badge composition verified.
 - New Exhibit: Field/Input/Select anatomy, progress, evidence cards, validation alerts, and cancellation AlertDialog verified.
 - Exhibit detail: story editing, artifact maintenance, timeline, loading/error/empty states, closure ceremonies, RadioGroup, Checkbox, Dialog, and AlertDialog verified.
 - Settings: storage, export, restore preview, invalid backup protection, file Input, Badges, Alerts, and destructive AlertDialogs verified.

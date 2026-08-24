@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, GalleryVerticalEnd } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -28,7 +29,15 @@ export function MuseumShell({ children }: Readonly<{ children: ReactNode }>) {
             href="/"
             aria-label="Almost Museum home"
           >
-            <GalleryVerticalEnd aria-hidden="true" className="size-7 stroke-[1.8]" />
+            <Image
+              alt=""
+              aria-hidden="true"
+              className="size-8 rounded-lg object-contain"
+              height={32}
+              priority
+              src="/brand/almost-museum-mark.png"
+              width={32}
+            />
             <span aria-hidden="true">Almost Museum</span>
           </Link>
           <nav

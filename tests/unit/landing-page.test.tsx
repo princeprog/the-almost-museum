@@ -32,6 +32,7 @@ describe("Almost landing page", () => {
     expect(main.querySelectorAll(".landing-screen")).toHaveLength(4);
     expect(screen.getByRole("region", { name: "Why preserve unfinished work" })).toBeVisible();
     expect(container.querySelectorAll('[data-slot="card"]')).toHaveLength(5);
+    expect(container.querySelectorAll('[data-slot="card-action"]')).toHaveLength(5);
     expect(screen.getByTestId("exhibit-track")).toBeVisible();
     expect(screen.getByTestId("workflow-track")).toBeVisible();
     expect(screen.getByTestId("value-track")).toBeVisible();

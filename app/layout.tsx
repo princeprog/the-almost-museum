@@ -19,6 +19,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Almost Museum",
   description: "A quiet place for unfinished work.",
+  icons: {
+    apple: "/icon.png",
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+  },
   manifest: "/manifest.webmanifest",
 };
 
