@@ -138,6 +138,15 @@ for (const viewport of [
     expect(emptyLayout.justifyContent).toBe("center");
     expect(emptyLayout.minHeight).toBeGreaterThan(0);
 
+    const emptyPageLayout = await page.evaluate(() => ({
+      scrollHeight: document.documentElement.scrollHeight,
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(emptyPageLayout.scrollHeight).toBeLessThanOrEqual(emptyPageLayout.viewportHeight);
+    expect(emptyPageLayout.scrollWidth).toBeLessThanOrEqual(emptyPageLayout.viewportWidth);
+
     await page.getByRole("button", { name: "Install Harbor Queue demo" }).click();
 
     const filters = page.getByRole("region", { name: "Filter collection" });

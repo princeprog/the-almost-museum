@@ -22,7 +22,7 @@ export function EmptyCollectionState({ onInstallDemo }: Readonly<EmptyCollection
   return (
     <Empty
       aria-labelledby="empty-collection-title"
-      className="mx-auto min-h-[calc(100svh-10rem)] w-full max-w-3xl border px-6 py-12 sm:px-10 sm:py-16"
+      className="mx-auto min-h-[calc(100svh-18rem)] w-full max-w-3xl border px-6 py-12 sm:px-10 sm:py-16 lg:min-h-[calc(100svh-16rem)]"
       role="region"
     >
       <EmptyHeader>
