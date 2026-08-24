@@ -4,12 +4,32 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { AlmostTimeline } from "@/components/almost-timeline";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { validateArtifactFile } from "@/lib/artifacts/file-validation";
 import { subscribeToLocationSearch } from "@/lib/browser/location-search";
@@ -84,6 +104,23 @@ function readRequestedId(search?: string): string | undefined {
   return new URLSearchParams(search ?? "").get("id")?.trim() || undefined;
 }
 
+function ExhibitTypeSelect({ id, onValueChange, value }: Readonly<{
+  id: string;
+  onValueChange: (value: ExhibitType) => void;
+  value: ExhibitType;
+}>) {
+  return (
+    <Select items={exhibitTypes} onValueChange={(nextValue) => onValueChange(nextValue as ExhibitType)} value={value}>
+      <SelectTrigger className="w-full" id={id}><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {exhibitTypes.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+
 function ArtifactPreview({ artifact }: Readonly<{ artifact: Artifact }>) {
   const [objectUrl, setObjectUrl] = useState<string>();
 
@@ -107,30 +144,32 @@ function ArtifactPreview({ artifact }: Readonly<{ artifact: Artifact }>) {
   if (objectUrl === undefined) return <p>Local file preview unavailable.</p>;
 
   return (
-    <div className="exhibit-detail__file-preview">
+    <div className="grid gap-3">
       {artifact.kind === "image" ? (
         // Local object URLs are intentionally not eligible for Next image optimization.
         // eslint-disable-next-line @next/next/no-img-element
-        <img alt={artifact.label} src={objectUrl} />
+        <img alt={artifact.label} className="max-h-96 max-w-full rounded-lg border object-contain" src={objectUrl} />
       ) : null}
-      {artifact.kind === "pdf" ? <iframe aria-label={artifact.label} src={objectUrl} title={artifact.label} /> : null}
-      {artifact.kind === "audio" ? <audio aria-label={artifact.label} controls src={objectUrl} /> : null}
-      <a download={artifact.fileName ?? artifact.label} href={objectUrl}>Download {artifact.label}</a>
+      {artifact.kind === "pdf" ? <iframe aria-label={artifact.label} className="h-80 w-full rounded-lg border" src={objectUrl} title={artifact.label} /> : null}
+      {artifact.kind === "audio" ? <audio aria-label={artifact.label} className="max-w-full" controls src={objectUrl} /> : null}
+      <a className={buttonVariants({ variant: "outline" })} download={artifact.fileName ?? artifact.label} href={objectUrl}>Download {artifact.label}</a>
     </div>
   );
 }
 
 function ArtifactCard({ artifact, onRemove }: Readonly<{ artifact: Artifact; onRemove: (artifact: Artifact) => void }>) {
   return (
-    <li className="exhibit-detail__artifact">
-      <div className="exhibit-detail__artifact-heading">
-        <div>
-          <Badge variant="outline">{formatLabel(artifact.kind)}</Badge>
-          <h3>{artifact.label}</h3>
-        </div>
-        <Button onClick={() => onRemove(artifact)} variant="ghost">Remove {artifact.label}</Button>
-      </div>
-      <ArtifactPreview artifact={artifact} />
+    <li>
+      <Card>
+        <CardHeader>
+          <Badge className="w-fit" variant="outline">{formatLabel(artifact.kind)}</Badge>
+          <CardTitle aria-level={3} role="heading">{artifact.label}</CardTitle>
+        </CardHeader>
+        <CardContent><ArtifactPreview artifact={artifact} /></CardContent>
+        <CardFooter className="justify-end">
+          <Button onClick={() => onRemove(artifact)} variant="ghost">Remove {artifact.label}</Button>
+        </CardFooter>
+      </Card>
     </li>
   );
 }
@@ -471,108 +510,144 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
     }
   }
 
+  useEffect(() => {
+    if (closureAction !== undefined || !shouldRestoreClosureFocusRef.current) return;
+    shouldRestoreClosureFocusRef.current = false;
+    exhibitHeadingRef.current?.focus();
+  }, [closureAction]);
+
   if (exhibitId === undefined) {
-    return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Exhibit</p><h1>Choose an Exhibit</h1><p>Open an Exhibit from the Museum to visit its story and artifacts.</p><Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link></main>;
+    return (
+      <main className="mx-auto w-full max-w-2xl">
+        <Empty className="border">
+          <EmptyHeader><EmptyTitle aria-level={1} role="heading">Choose an Exhibit</EmptyTitle><EmptyDescription>Open an Exhibit from the Museum to visit its story and artifacts.</EmptyDescription></EmptyHeader>
+          <EmptyContent><Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link></EmptyContent>
+        </Empty>
+      </main>
+    );
   }
   if (loadError) {
     return (
-      <main className="exhibit-detail exhibit-detail--missing">
-        <p className="museum-eyebrow">Connection to your collection interrupted</p>
-        <h1>This Exhibit could not be opened.</h1>
-        <p role="alert">This Exhibit could not be opened. Your local records have not been changed. Try opening this Exhibit again when the browser is ready.</p>
-        <div className="exhibit-detail__actions">
+      <main className="mx-auto grid w-full max-w-2xl gap-4">
+        <Alert variant="destructive">
+          <AlertTitle>This Exhibit could not be opened.</AlertTitle>
+          <AlertDescription>Your local records have not been changed. Try opening this Exhibit again when the browser is ready.</AlertDescription>
+        </Alert>
+        <div className="flex flex-wrap gap-2">
           <Button onClick={() => setLoadAttempt((current) => current + 1)}>Try opening this Exhibit again</Button>
           <Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link>
         </div>
       </main>
     );
   }
-  if (isLoading || (!isMissing && exhibit?.id !== exhibitId)) return <main className="exhibit-detail"><p role="status">Opening this Exhibit…</p></main>;
+  if (isLoading || (!isMissing && exhibit?.id !== exhibitId)) {
+    return <main className="mx-auto grid w-full max-w-5xl gap-4" role="status" aria-label="Opening this Exhibit"><Skeleton className="h-40 w-full" /><Skeleton className="h-72 w-full" /></main>;
+  }
   if (isMissing || exhibit === undefined) {
-    return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Not found</p><h1>That Exhibit is not here</h1><p>It may have been removed, or the link may be incomplete.</p><Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link></main>;
+    return (
+      <main className="mx-auto w-full max-w-2xl">
+        <Empty className="border">
+          <EmptyHeader><EmptyTitle aria-level={1} role="heading">That Exhibit is not here</EmptyTitle><EmptyDescription>It may have been removed, or the link may be incomplete.</EmptyDescription></EmptyHeader>
+          <EmptyContent><Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link></EmptyContent>
+        </Empty>
+      </main>
+    );
   }
 
   const rooms = getExhibitRooms(exhibit);
+  const transformExhibitOptions = [
+    { label: "Choose an Exhibit", value: null },
+    ...transformCandidates.map((candidate) => ({ label: `${candidate.title} — ${candidate.museumLabel}`, value: candidate.id })),
+  ];
+
   return (
-    <main className="exhibit-detail">
-      <header className="exhibit-detail__header">
-        <div>
-          <p className="museum-eyebrow">{formatLabel(exhibit.type)} / {formatLabel(exhibit.status)}</p>
-          <h1 ref={exhibitHeadingRef} tabIndex={-1}>{exhibit.title}</h1>
-          <p>{exhibit.museumLabel}</p>
-        </div>
-        <div className="exhibit-detail__actions">
+    <main className="mx-auto grid w-full max-w-5xl gap-6">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap gap-2"><Badge>{formatLabel(exhibit.type)}</Badge><Badge variant="outline">{formatLabel(exhibit.status)}</Badge></div>
+          <CardTitle><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl" ref={exhibitHeadingRef} tabIndex={-1}>{exhibit.title}</h1></CardTitle>
+          <CardDescription>{exhibit.museumLabel}</CardDescription>
+        </CardHeader>
+        <CardFooter className="flex-wrap gap-2">
           <Link className={buttonVariants({ variant: "ghost" })} href="/museum">Museum</Link>
           <Button onClick={() => { setFormValues(exhibit); setIsEditing(true); }}>Edit Exhibit</Button>
           {(["revive", "archive", "complete", "transform", "release"] as ClosureAction[])
             .filter((action) => canApplyClosureAction(exhibit, action))
             .map((action) => <Button key={action} onClick={() => void openClosureDialog(action)} variant="secondary">{closureLabels[action]}</Button>)}
-        </div>
-      </header>
+        </CardFooter>
+      </Card>
 
-      {message !== undefined ? <p className="exhibit-detail__message" role={message.intent}>{message.text}</p> : null}
+      {message !== undefined ? <Alert role={message.intent} variant={message.intent === "alert" ? "destructive" : "default"}><AlertTitle>{message.intent === "alert" ? "Needs attention" : "Collection updated"}</AlertTitle><AlertDescription>{message.text}</AlertDescription></Alert> : null}
 
       {isEditing ? (
-        <form className="exhibit-detail__edit" noValidate onSubmit={saveChanges}>
-          <h2>Edit this Exhibit</h2>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-title">Working title</FieldLabel><Input id="detail-title" onChange={(event) => setTitle(event.target.value)} value={title} /></Field>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-type">Exhibit type</FieldLabel><NativeSelect className="w-full" id="detail-type" onChange={(event) => setType(event.target.value as ExhibitType)} value={type}>{exhibitTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</NativeSelect></Field>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-label">Museum label</FieldLabel><Input id="detail-label" onChange={(event) => setMuseumLabel(event.target.value)} value={museumLabel} /></Field>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-started">Why it started</FieldLabel><Textarea id="detail-started" onChange={(event) => setWhyStarted(event.target.value)} value={whyStarted} /></Field>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-stopped">Why it stopped</FieldLabel><Textarea id="detail-stopped" onChange={(event) => setWhyStopped(event.target.value)} value={whyStopped} /></Field>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-taught">What it taught me</FieldLabel><Textarea id="detail-taught" onChange={(event) => setWhatItTaughtMe(event.target.value)} value={whatItTaughtMe} /></Field>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-tags">Tags</FieldLabel><Input id="detail-tags" onChange={(event) => setTags(event.target.value)} value={tags} /></Field>
-          <div className="exhibit-detail__actions"><Button type="submit">Save changes</Button><Button onClick={() => setIsEditing(false)} variant="secondary">Cancel editing</Button></div>
-        </form>
+        <Card>
+          <form noValidate onSubmit={saveChanges}>
+            <CardHeader><CardTitle>Edit this Exhibit</CardTitle><CardDescription>Update the catalog details without losing the original record.</CardDescription></CardHeader>
+            <CardContent>
+              <FieldGroup>
+                <Field><FieldLabel htmlFor="detail-title">Working title</FieldLabel><Input id="detail-title" onChange={(event) => setTitle(event.target.value)} value={title} /></Field>
+                <Field><FieldLabel htmlFor="detail-type">Exhibit type</FieldLabel><ExhibitTypeSelect id="detail-type" onValueChange={setType} value={type} /></Field>
+                <Field><FieldLabel htmlFor="detail-label">Museum label</FieldLabel><Input id="detail-label" onChange={(event) => setMuseumLabel(event.target.value)} value={museumLabel} /></Field>
+                <Field><FieldLabel htmlFor="detail-started">Why it started</FieldLabel><Textarea id="detail-started" onChange={(event) => setWhyStarted(event.target.value)} value={whyStarted} /></Field>
+                <Field><FieldLabel htmlFor="detail-stopped">Why it stopped</FieldLabel><Textarea id="detail-stopped" onChange={(event) => setWhyStopped(event.target.value)} value={whyStopped} /></Field>
+                <Field><FieldLabel htmlFor="detail-taught">What it taught me</FieldLabel><Textarea id="detail-taught" onChange={(event) => setWhatItTaughtMe(event.target.value)} value={whatItTaughtMe} /></Field>
+                <Field><FieldLabel htmlFor="detail-tags">Tags</FieldLabel><Input id="detail-tags" onChange={(event) => setTags(event.target.value)} value={tags} /></Field>
+              </FieldGroup>
+            </CardContent>
+            <CardFooter className="flex-wrap justify-end gap-2"><Button onClick={() => setIsEditing(false)} variant="outline">Cancel editing</Button><Button type="submit">Save changes</Button></CardFooter>
+          </form>
+        </Card>
       ) : (
-        <section className="exhibit-detail__story" aria-labelledby="exhibit-story-title">
-          <div><p className="museum-eyebrow">Rooms</p><ul aria-label="Museum rooms">{rooms.map((room) => <li key={room}>{roomLabels[room]}</li>)}</ul></div>
-          <div><h2 id="exhibit-story-title">The story so far</h2><dl>
-            {exhibit.whyStarted !== undefined ? <div><dt>Why it started</dt><dd>{exhibit.whyStarted}</dd></div> : null}
-            {exhibit.whyStopped !== undefined ? <div><dt>Why it stopped</dt><dd>{exhibit.whyStopped}</dd></div> : null}
-            {exhibit.whatItTaughtMe !== undefined ? <div><dt>What it taught me</dt><dd>{exhibit.whatItTaughtMe}</dd></div> : null}
-          </dl>{exhibit.tags.length > 0 ? <ul aria-label="Exhibit tags" className="museum-gallery__tags">{exhibit.tags.map((tag) => <li key={tag}><Badge variant="outline">{tag}</Badge></li>)}</ul> : null}</div>
-        </section>
+        <Card aria-labelledby="exhibit-story-title">
+          <CardHeader><CardTitle id="exhibit-story-title">The story so far</CardTitle><CardDescription>Where this work belongs and what remains with it.</CardDescription></CardHeader>
+          <CardContent className="grid gap-6 md:grid-cols-[minmax(12rem,0.6fr)_minmax(0,1.4fr)]">
+            <div className="flex flex-col gap-3"><h3 className="text-sm font-medium">Rooms</h3><ul aria-label="Museum rooms" className="flex list-none flex-wrap gap-2 p-0">{rooms.map((room) => <li key={room}><Badge variant="secondary">{roomLabels[room]}</Badge></li>)}</ul></div>
+            <div className="flex flex-col gap-4"><dl className="grid gap-4">
+              {exhibit.whyStarted !== undefined ? <div><dt className="text-sm font-medium">Why it started</dt><dd className="text-sm text-muted-foreground">{exhibit.whyStarted}</dd></div> : null}
+              {exhibit.whyStopped !== undefined ? <div><dt className="text-sm font-medium">Why it stopped</dt><dd className="text-sm text-muted-foreground">{exhibit.whyStopped}</dd></div> : null}
+              {exhibit.whatItTaughtMe !== undefined ? <div><dt className="text-sm font-medium">What it taught me</dt><dd className="text-sm text-muted-foreground">{exhibit.whatItTaughtMe}</dd></div> : null}
+            </dl>{exhibit.tags.length > 0 ? <ul aria-label="Exhibit tags" className="flex list-none flex-wrap gap-2 p-0">{exhibit.tags.map((tag) => <li key={tag}><Badge variant="outline">{tag}</Badge></li>)}</ul> : null}</div>
+          </CardContent>
+        </Card>
       )}
 
       <AlmostTimeline error={isTimelineUnavailable} history={history} isLoading={isTimelineLoading} />
 
-      <section className="exhibit-detail__artifacts" aria-labelledby="artifact-title">
-        <header><p className="museum-eyebrow">Artifacts</p><h2 id="artifact-title">Kept with this Exhibit</h2></header>
-        {artifacts.length > 0 ? <ul>{artifacts.map((artifact) => <ArtifactCard artifact={artifact} key={artifact.id} onRemove={removeArtifact} />)}</ul> : <p>Nothing is attached yet. A note, link, or local file can stay with this work.</p>}
-        <div className="exhibit-detail__attachment-forms">
-          <div><h3>Add a link</h3><Field className="museum-field"><FieldLabel htmlFor="detail-link-label">Link label</FieldLabel><Input id="detail-link-label" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} /></Field><Field className="museum-field"><FieldLabel htmlFor="detail-link-address">Link address</FieldLabel><Input id="detail-link-address" onChange={(event) => setLinkAddress(event.target.value)} value={linkAddress} /></Field><Button onClick={() => void addLink()} variant="secondary">Add link</Button></div>
-          <div><h3>Add a note</h3><Field className="museum-field"><FieldLabel htmlFor="detail-note-label">Note label</FieldLabel><Input id="detail-note-label" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} /></Field><Field className="museum-field"><FieldLabel htmlFor="detail-note">Note</FieldLabel><Textarea id="detail-note" onChange={(event) => setNote(event.target.value)} value={note} /></Field><Button onClick={() => void addNote()} variant="secondary">Add note</Button></div>
-          <div><h3>Add a local file</h3><label className="museum-field" htmlFor="detail-file"><span className="museum-field__label">Image, PDF, or audio</span><input accept="image/*,application/pdf,audio/*" className="museum-input" id="detail-file" onChange={(event) => void addFile(event)} type="file" /></label></div>
-        </div>
-      </section>
+      <Card aria-labelledby="artifact-title">
+        <CardHeader><CardTitle id="artifact-title">Kept with this Exhibit</CardTitle><CardDescription>A note, link, or local file can stay with this work.</CardDescription></CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          {artifacts.length > 0 ? <ul className="grid list-none gap-4 p-0 md:grid-cols-2">{artifacts.map((artifact) => <ArtifactCard artifact={artifact} key={artifact.id} onRemove={removeArtifact} />)}</ul> : <Empty><EmptyHeader><EmptyTitle>No artifacts yet</EmptyTitle><EmptyDescription>Attach the evidence that helps this Exhibit keep its context.</EmptyDescription></EmptyHeader></Empty>}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card size="sm"><CardHeader><CardTitle>Add a link</CardTitle></CardHeader><CardContent><FieldGroup><Field><FieldLabel htmlFor="detail-link-label">Link label</FieldLabel><Input id="detail-link-label" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} /></Field><Field><FieldLabel htmlFor="detail-link-address">Link address</FieldLabel><Input id="detail-link-address" onChange={(event) => setLinkAddress(event.target.value)} type="url" value={linkAddress} /></Field></FieldGroup></CardContent><CardFooter><Button onClick={() => void addLink()} variant="secondary">Add link</Button></CardFooter></Card>
+            <Card size="sm"><CardHeader><CardTitle>Add a note</CardTitle></CardHeader><CardContent><FieldGroup><Field><FieldLabel htmlFor="detail-note-label">Note label</FieldLabel><Input id="detail-note-label" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} /></Field><Field><FieldLabel htmlFor="detail-note">Note</FieldLabel><Textarea id="detail-note" onChange={(event) => setNote(event.target.value)} value={note} /></Field></FieldGroup></CardContent><CardFooter><Button onClick={() => void addNote()} variant="secondary">Add note</Button></CardFooter></Card>
+            <Card size="sm"><CardHeader><CardTitle>Add a local file</CardTitle></CardHeader><CardContent><Field><FieldLabel htmlFor="detail-file">Image, PDF, or audio</FieldLabel><Input accept="image/*,application/pdf,audio/*" id="detail-file" onChange={(event) => void addFile(event)} type="file" /></Field></CardContent></Card>
+          </div>
+        </CardContent>
+      </Card>
 
       {closureAction !== undefined ? (
-        <Dialog
-          description={closureAction === "transform"
-            ? "Choose an existing Exhibit or begin a linked successor. Both records will remain connected."
-            : "This records a new status change in the Exhibit timeline."}
-          isOpen
-          onOpenChange={(isOpen) => { if (!isOpen) closeClosureDialog(); }}
-          restoreFocusRef={exhibitHeadingRef}
-          shouldRestoreFocusRef={shouldRestoreClosureFocusRef}
-          title={closureDialogTitles[closureAction]}
-        >
-          <div className="exhibit-detail__closure-dialog">
+        <Dialog onOpenChange={(isOpen) => { if (!isOpen) closeClosureDialog(); }} open>
+          <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{closureDialogTitles[closureAction]}</DialogTitle>
+              <DialogDescription>{closureAction === "transform" ? "Choose an existing Exhibit or begin a linked successor. Both records will remain connected." : "This records a new status change in the Exhibit timeline."}</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
             {closureAction === "transform" ? (
-              <>
-                <label className="museum-field exhibit-detail__choice"><input checked={transformMode === "existing"} name="transform-target" onChange={() => setTransformMode("existing")} type="radio" /> <span>Create a link to an existing Exhibit</span></label>
-                {transformMode === "existing" ? <Field className="museum-field"><FieldLabel htmlFor="transform-existing">Existing Exhibit</FieldLabel><NativeSelect className="w-full" id="transform-existing" onChange={(event) => setRelatedExhibitId(event.target.value)} value={relatedExhibitId}><option value="">Choose an Exhibit</option>{transformCandidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title} — {candidate.museumLabel}</option>)}</NativeSelect></Field> : null}
-                <label className="museum-field exhibit-detail__choice"><input checked={transformMode === "new"} name="transform-target" onChange={() => setTransformMode("new")} type="radio" /> <span>Create a new Exhibit</span></label>
-                {transformMode === "new" ? <div className="exhibit-detail__new-target"><Field className="museum-field"><FieldLabel htmlFor="transform-new-title">New Exhibit title</FieldLabel><Input id="transform-new-title" onChange={(event) => setNewExhibitTitle(event.target.value)} value={newExhibitTitle} /></Field><Field className="museum-field"><FieldLabel htmlFor="transform-new-type">New Exhibit type</FieldLabel><NativeSelect className="w-full" id="transform-new-type" onChange={(event) => setNewExhibitType(event.target.value as ExhibitType)} value={newExhibitType}>{exhibitTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</NativeSelect></Field><Field className="museum-field"><FieldLabel htmlFor="transform-new-label">New Exhibit label</FieldLabel><Input id="transform-new-label" onChange={(event) => setNewExhibitLabel(event.target.value)} value={newExhibitLabel} /></Field></div> : null}
-              </>
+              <FieldSet><FieldLegend variant="label">Transformation target</FieldLegend><RadioGroup onValueChange={(value) => setTransformMode(value as "existing" | "new")} value={transformMode}>
+                <Field orientation="horizontal"><RadioGroupItem id="transform-existing-choice" value="existing" /><FieldLabel htmlFor="transform-existing-choice">Create a link to an existing Exhibit</FieldLabel></Field>
+                {transformMode === "existing" ? <Field><FieldLabel htmlFor="transform-existing">Existing Exhibit</FieldLabel><Select items={transformExhibitOptions} onValueChange={(value) => setRelatedExhibitId(value ?? "")} value={relatedExhibitId || null}><SelectTrigger className="w-full" id="transform-existing"><SelectValue placeholder="Choose an Exhibit" /></SelectTrigger><SelectContent><SelectGroup>{transformExhibitOptions.map((option) => <SelectItem key={option.value ?? "empty"} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent></Select></Field> : null}
+                <Field orientation="horizontal"><RadioGroupItem id="transform-new-choice" value="new" /><FieldLabel htmlFor="transform-new-choice">Create a new Exhibit</FieldLabel></Field>
+                {transformMode === "new" ? <FieldGroup><Field><FieldLabel htmlFor="transform-new-title">New Exhibit title</FieldLabel><Input id="transform-new-title" onChange={(event) => setNewExhibitTitle(event.target.value)} value={newExhibitTitle} /></Field><Field><FieldLabel htmlFor="transform-new-type">New Exhibit type</FieldLabel><ExhibitTypeSelect id="transform-new-type" onValueChange={setNewExhibitType} value={newExhibitType} /></Field><Field><FieldLabel htmlFor="transform-new-label">New Exhibit label</FieldLabel><Input id="transform-new-label" onChange={(event) => setNewExhibitLabel(event.target.value)} value={newExhibitLabel} /></Field></FieldGroup> : null}
+              </RadioGroup></FieldSet>
             ) : null}
-            {closureAction === "release" ? <label className="museum-field exhibit-detail__choice"><input checked={releaseAcknowledged} onChange={(event) => setReleaseAcknowledged(event.target.checked)} type="checkbox" /> <span>I understand this Exhibit will be released from the active collection.</span></label> : null}
-            <div className="exhibit-detail__actions">
-              <Button disabled={isTransitioning} onClick={closeClosureDialog} variant="secondary">Cancel</Button>
-              <Button disabled={isTransitioning || (closureAction === "release" && !releaseAcknowledged)} onClick={() => void applyClosureCeremony()}>{isTransitioning ? "Recording ceremony…" : closureAction === "transform" ? "Transform Exhibit" : closureConfirmLabels[closureAction]}</Button>
+            {closureAction === "release" ? <Field orientation="horizontal"><Checkbox checked={releaseAcknowledged} id="release-acknowledgement" onCheckedChange={setReleaseAcknowledged} /><FieldLabel htmlFor="release-acknowledgement">I understand this Exhibit will be released from the active collection.</FieldLabel></Field> : null}
             </div>
-          </div>
+            <DialogFooter>
+              <Button disabled={isTransitioning} onClick={closeClosureDialog} variant="outline">Cancel</Button>
+              <Button disabled={isTransitioning || (closureAction === "release" && !releaseAcknowledged)} onClick={() => void applyClosureCeremony()}>{isTransitioning ? "Recording ceremony…" : closureAction === "transform" ? "Transform Exhibit" : closureConfirmLabels[closureAction]}</Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       ) : null}
     </main>

@@ -1,4 +1,9 @@
 import type { HistoryEvent } from "@/lib/domain";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface AlmostTimelineProps {
   history?: HistoryEvent[];
@@ -92,24 +97,33 @@ function formatOccurredAt(occurredAt: string): string {
 
 /** A read-only rendering of append-only history from the canonical Exhibit repository. */
 export function AlmostTimeline({ history = [], isLoading = false, error = false }: Readonly<AlmostTimelineProps>) {
-  if (isLoading) return <section className="almost-timeline" aria-label="The Almost timeline"><p role="status">Opening the timeline…</p></section>;
+  if (isLoading) {
+    return (
+      <Card aria-label="The Almost timeline" role="status">
+        <CardHeader><CardTitle>The Almost timeline</CardTitle><CardDescription>Opening the timeline…</CardDescription></CardHeader>
+        <CardContent className="grid gap-3"><Skeleton className="h-5 w-1/3" /><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></CardContent>
+      </Card>
+    );
+  }
   if (error) {
-    return <section className="almost-timeline almost-timeline--unavailable" aria-labelledby="timeline-title"><p className="museum-eyebrow">Record</p><h2 id="timeline-title">The timeline is unavailable</h2><p>The rest of this Exhibit is still here; try opening it again for its record.</p></section>;
+    return <Alert variant="destructive"><AlertTitle aria-level={2} role="heading">The timeline is unavailable</AlertTitle><AlertDescription>The rest of this Exhibit is still here; try opening it again for its record.</AlertDescription></Alert>;
   }
   if (history.length === 0) {
-    return <section className="almost-timeline" aria-labelledby="timeline-title"><p className="museum-eyebrow">Record</p><h2 id="timeline-title">The Almost timeline</h2><p>This Exhibit has not recorded an event yet.</p></section>;
+    return <Card><Empty><EmptyHeader><EmptyTitle aria-level={2} role="heading">The Almost timeline</EmptyTitle><EmptyDescription>This Exhibit has not recorded an event yet.</EmptyDescription></EmptyHeader></Empty></Card>;
   }
 
   const chronologicalHistory = [...history].sort((left, right) => left.occurredAt.localeCompare(right.occurredAt) || left.id.localeCompare(right.id));
   return (
-    <section className="almost-timeline" aria-labelledby="timeline-title">
-      <header><p className="museum-eyebrow">Record</p><h2 id="timeline-title">The Almost timeline</h2><p>Every change stays part of the record.</p></header>
-      <ol>
+    <Card aria-labelledby="timeline-title">
+      <CardHeader><CardTitle aria-level={2} id="timeline-title" role="heading">The Almost timeline</CardTitle><CardDescription>Every change stays part of the record.</CardDescription></CardHeader>
+      <CardContent>
+      <ol className="grid list-none gap-4 p-0">
         {chronologicalHistory.map((event) => {
           const details = describeDetails(event);
-          return <li key={event.id}><time dateTime={event.occurredAt}>{formatOccurredAt(event.occurredAt)}</time><p>{describeEvent(event)}</p>{details.map((detail) => <p className="almost-timeline__detail" key={detail}>{detail}</p>)}</li>;
+          return <li className="grid gap-2 border-l-2 border-primary pl-4" key={event.id}><Badge className="w-fit" variant="outline"><time dateTime={event.occurredAt}>{formatOccurredAt(event.occurredAt)}</time></Badge><p className="text-sm text-foreground">{describeEvent(event)}</p>{details.map((detail) => <p className="text-sm text-muted-foreground" key={detail}>{detail}</p>)}</li>;
         })}
       </ol>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

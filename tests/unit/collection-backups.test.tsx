@@ -84,7 +84,7 @@ describe("CollectionBackups", () => {
     expect(await screen.findByText("Ready to restore 1 Exhibit, 0 artifacts, and 1 history event.")).toBeVisible();
     expect((await target.getSnapshot()).exhibits[0].title).toBe("Local work");
     await user.click(screen.getByRole("button", { name: "Restore collection" }));
-    expect(screen.getByRole("dialog", { name: "Replace this collection?" })).toBeVisible();
+    expect(screen.getByRole("alertdialog", { name: "Replace this collection?" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Replace collection" }));
 
     await waitFor(async () => expect((await target.getSnapshot()).exhibits[0]).toMatchObject({ id: imported.id, title: "Imported Harbor Queue" }));

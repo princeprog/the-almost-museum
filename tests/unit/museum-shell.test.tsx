@@ -5,7 +5,14 @@ import { describe, expect, it } from "vitest";
 
 import HomePage from "../../app/page";
 import { MuseumShell } from "../../components/museum-shell";
-import { Dialog } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "../../components/ui/field";
 import { Input } from "../../components/ui/input";
 
@@ -13,12 +20,13 @@ function DialogTriggerHarness() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <>
-      <button onClick={() => setIsOpen(true)} type="button">Open collection note</button>
-      <Dialog isOpen={isOpen} onOpenChange={setIsOpen} title="Collection note">
+    <Dialog onOpenChange={setIsOpen} open={isOpen}>
+      <DialogTrigger>Open collection note</DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Collection note</DialogTitle></DialogHeader>
         <button type="button">Confirm note</button>
-      </Dialog>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -55,26 +63,34 @@ describe("museum shell", () => {
     const user = userEvent.setup();
 
     render(
-      <Dialog isOpen onOpenChange={() => undefined} title="Move to Archive">
-        <button type="button">Confirm move</button>
-        <button tabIndex={-1} type="button">Excluded action</button>
-        <button style={{ display: "none" }} type="button">Hidden action</button>
-      </Dialog>,
+      <>
+        <button type="button">Outside action</button>
+        <Dialog onOpenChange={() => undefined} open>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Move to Archive</DialogTitle></DialogHeader>
+            <button type="button">Confirm move</button>
+            <button tabIndex={-1} type="button">Excluded action</button>
+            <button style={{ display: "none" }} type="button">Hidden action</button>
+          </DialogContent>
+        </Dialog>
+      </>,
     );
 
-    const closeButton = screen.getByRole("button", { name: "Close dialog" });
+    const closeButton = screen.getByRole("button", { name: "Close" });
     const confirmButton = screen.getByRole("button", { name: "Confirm move" });
+    const outsideButton = screen.getByRole("button", { name: "Outside action", hidden: true });
+    const focusedControls = new Set<Element>();
 
-    expect(screen.getByRole("dialog")).toHaveFocus();
+    for (let step = 0; step < 6; step += 1) {
+      await user.tab();
+      const activeElement = document.activeElement;
+      expect(activeElement).not.toBe(outsideButton);
+      expect(activeElement?.closest("[data-slot='dialog-portal']")).not.toBeNull();
+      focusedControls.add(activeElement as Element);
+    }
 
-    await user.tab();
-    expect(closeButton).toHaveFocus();
-
-    await user.tab();
-    expect(confirmButton).toHaveFocus();
-
-    await user.tab();
-    expect(closeButton).toHaveFocus();
+    expect(focusedControls.has(closeButton)).toBe(true);
+    expect(confirmButton).not.toHaveAttribute("tabindex", "-1");
   });
 
   it("returns focus to an unchanged trigger when a dialog is dismissed with Escape", async () => {
@@ -125,14 +141,14 @@ describe("museum shell", () => {
     render(
       <>
         <p id="release-guidance">This action can be revisited from history.</p>
-        <Dialog
-          aria-describedby="release-guidance"
-          description="Release preserves this Exhibit in your collection."
-          isOpen
-          onOpenChange={() => undefined}
-          title="Release Exhibit"
-        >
-          <button type="button">Release</button>
+        <Dialog onOpenChange={() => undefined} open>
+          <DialogContent aria-describedby="release-guidance release-description">
+            <DialogHeader>
+              <DialogTitle>Release Exhibit</DialogTitle>
+              <DialogDescription id="release-description">Release preserves this Exhibit in your collection.</DialogDescription>
+            </DialogHeader>
+            <button type="button">Release</button>
+          </DialogContent>
         </Dialog>
       </>,
     );

@@ -9,10 +9,19 @@ import { Controller, useForm } from "react-hook-form";
 import { validateArtifactFile, type ValidatedFileArtifact } from "@/lib/artifacts/file-validation";
 import { getStorageQuotaWarning } from "@/lib/artifacts/storage-quota";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -562,17 +571,18 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         </form>
       </Card>
 
-      <Dialog
-        description="Leaving now will discard this unsaved draft."
-        isOpen={isCancelDialogOpen}
-        onOpenChange={setIsCancelDialogOpen}
-        title="Leave this Exhibit?"
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <Button className="min-h-11 sm:min-h-8" onClick={() => setIsCancelDialogOpen(false)} variant="outline">Keep capturing</Button>
-          <Button className="min-h-11 sm:min-h-8" onClick={() => onNavigate("/museum")} variant="destructive">Leave without saving</Button>
-        </div>
-      </Dialog>
+      <AlertDialog onOpenChange={setIsCancelDialogOpen} open={isCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave this Exhibit?</AlertDialogTitle>
+            <AlertDialogDescription>Leaving now will discard this unsaved draft.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="min-h-11 sm:min-h-8">Keep capturing</AlertDialogCancel>
+            <AlertDialogAction className="min-h-11 sm:min-h-8" onClick={() => onNavigate("/museum")} variant="destructive">Leave without saving</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.main>
   );
 }

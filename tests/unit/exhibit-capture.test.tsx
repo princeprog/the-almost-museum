@@ -283,11 +283,11 @@ describe("ExhibitCapture", () => {
     expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveFocus();
 
     await user.click(screen.getByRole("button", { name: "Cancel capture" }));
-    expect(screen.getByRole("dialog", { name: "Leave this Exhibit?" })).toBeVisible();
+    expect(screen.getByRole("alertdialog", { name: "Leave this Exhibit?" })).toBeVisible();
     expect(navigatedTo).toEqual([]);
 
     await user.click(screen.getByRole("button", { name: "Keep capturing" }));
-    expect(screen.queryByRole("dialog", { name: "Leave this Exhibit?" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog", { name: "Leave this Exhibit?" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cancel capture" }));
     await user.click(screen.getByRole("button", { name: "Leave without saving" }));

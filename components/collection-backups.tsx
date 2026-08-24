@@ -3,7 +3,16 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   BackupValidationError,
   exportCollectionBackup,
@@ -149,17 +158,18 @@ export function CollectionBackups({
       {message !== undefined ? <p role="status">{message}</p> : null}
       {error !== undefined ? <p role="alert">{error}</p> : null}
 
-      <Dialog
-        description="The backup preview has passed validation. Replacing the collection cannot be undone from this browser."
-        isOpen={isRestoreDialogOpen}
-        onOpenChange={setRestoreDialogOpen}
-        title="Replace this collection?"
-      >
-        <div className="collection-backups__dialog-actions">
-          <Button disabled={isWorking} onClick={() => setRestoreDialogOpen(false)} variant="secondary">Cancel</Button>
-          <Button disabled={isWorking} onClick={() => void handleRestore()} variant="destructive">Replace collection</Button>
-        </div>
-      </Dialog>
+      <AlertDialog onOpenChange={setRestoreDialogOpen} open={isRestoreDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace this collection?</AlertDialogTitle>
+            <AlertDialogDescription>The backup preview has passed validation. Replacing the collection cannot be undone from this browser.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isWorking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={isWorking} onClick={() => void handleRestore()} variant="destructive">Replace collection</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

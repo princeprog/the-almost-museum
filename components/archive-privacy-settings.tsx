@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   getStorageStatus,
   requestPersistentStorage,
@@ -124,19 +133,20 @@ export function ArchivePrivacySettings({ repository: suppliedRepository, storage
       {message !== undefined ? <p role="status">{message}</p> : null}
       {error !== undefined ? <p role="alert">{error}</p> : null}
 
-      <Dialog
-        description="This removes every Exhibit, stored attachment, and timeline event from this browser. Only an exported backup can restore the collection."
-        isOpen={isEraseDialogOpen}
-        onOpenChange={setEraseDialogOpen}
-        title="Erase all local museum data?"
-      >
-        <div className="archive-privacy-settings__dialog-actions">
-          <Button disabled={isErasing} onClick={() => setEraseDialogOpen(false)} variant="secondary">Cancel</Button>
-          <Button disabled={isErasing} onClick={() => void handleErase()} variant="destructive">
+      <AlertDialog onOpenChange={setEraseDialogOpen} open={isEraseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Erase all local museum data?</AlertDialogTitle>
+            <AlertDialogDescription>This removes every Exhibit, stored attachment, and timeline event from this browser. Only an exported backup can restore the collection.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isErasing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={isErasing} onClick={() => void handleErase()} variant="destructive">
             {isErasing ? "Erasing local data…" : "Erase all data"}
-          </Button>
-        </div>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

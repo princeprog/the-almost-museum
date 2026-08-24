@@ -68,7 +68,7 @@ describe("ArchivePrivacySettings", () => {
     render(<ArchivePrivacySettings repository={repository} storage={{}} />);
     await user.click(screen.getByRole("button", { name: "Erase all local data" }));
 
-    expect(screen.getByRole("dialog", { name: "Erase all local museum data?" })).toBeVisible();
+    expect(screen.getByRole("alertdialog", { name: "Erase all local museum data?" })).toBeVisible();
     await expect(repository.getSnapshot()).resolves.toMatchObject({ exhibits: [{ title: "Keep this until confirmation" }] });
     await user.click(screen.getByRole("button", { name: "Erase all data" }));
 

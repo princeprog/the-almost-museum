@@ -83,7 +83,7 @@ describe("AlmostTimeline", () => {
   it("presents creation, edits, artifacts, transformations, and closure events in chronological museum language", () => {
     render(<AlmostTimeline history={events} />);
 
-    expect(screen.getByRole("heading", { name: "The Almost timeline" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "The Almost timeline" }).closest('[data-slot="card"]')).toBeInTheDocument();
     expect(screen.getByText("This Exhibit entered the collection as an active Project.")).toBeVisible();
     expect(screen.getByText("Catalog details were revised: Museum label and tags.")).toBeVisible();
     expect(screen.getByText("A link artifact was added to the collection.")).toBeVisible();
@@ -116,12 +116,15 @@ describe("AlmostTimeline", () => {
   it("gives the exhibit a clear loading, empty, and unavailable timeline state", () => {
     const { rerender } = render(<AlmostTimeline isLoading />);
     expect(screen.getByRole("status")).toHaveTextContent("Opening the timeline…");
+    expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
 
     rerender(<AlmostTimeline history={[]} />);
     expect(screen.getByText("This Exhibit has not recorded an event yet.")).toBeVisible();
+    expect(screen.getByText("This Exhibit has not recorded an event yet.").closest('[data-slot="empty"]')).toBeInTheDocument();
 
     rerender(<AlmostTimeline error />);
     expect(screen.getByRole("heading", { name: "The timeline is unavailable" })).toBeVisible();
     expect(screen.getByText("The rest of this Exhibit is still here; try opening it again for its record.")).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveAttribute("data-slot", "alert");
   });
 });

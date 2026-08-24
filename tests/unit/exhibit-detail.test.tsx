@@ -53,7 +53,7 @@ afterEach(async () => {
 });
 
 describe("ExhibitDetail", () => {
-  it("uses field and action primitives while retaining native closure and file controls", async () => {
+  it("uses shadcn fields, selects, files, and choice controls throughout the detail flow", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-detail-primitives");
     const exhibit = await createExhibit(repository);
@@ -63,16 +63,16 @@ describe("ExhibitDetail", () => {
 
     await user.click(screen.getByRole("button", { name: "Edit Exhibit" }));
     expect(screen.getByRole("textbox", { name: "Working title" })).toHaveAttribute("data-slot", "input");
-    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveAttribute("data-slot", "native-select");
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveAttribute("data-slot", "select-trigger");
     expect(screen.getByRole("textbox", { name: "Why it started" })).toHaveAttribute("data-slot", "textarea");
     expect(screen.getByRole("button", { name: "Save changes" })).toHaveAttribute("data-slot", "button");
 
     await user.click(screen.getByRole("button", { name: "Cancel editing" }));
-    expect(screen.getByLabelText("Image, PDF, or audio")).not.toHaveAttribute("data-slot");
+    expect(screen.getByLabelText("Image, PDF, or audio")).toHaveAttribute("data-slot", "input");
 
     await user.click(screen.getByRole("button", { name: "Transform" }));
-    expect(screen.getByRole("radio", { name: "Create a link to an existing Exhibit" })).not.toHaveAttribute("data-slot");
-    expect(screen.getByRole("combobox", { name: "Existing Exhibit" })).toHaveAttribute("data-slot", "native-select");
+    expect(screen.getByRole("radio", { name: "Create a link to an existing Exhibit" })).toHaveAttribute("data-slot", "radio-group-item");
+    expect(screen.getByRole("combobox", { name: "Existing Exhibit" })).toHaveAttribute("data-slot", "select-trigger");
   });
 
   it("explains when the query does not name an Exhibit", async () => {
