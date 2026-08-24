@@ -46,11 +46,13 @@ describe("ArchivePrivacySettings", () => {
       persist,
     }} />);
 
+    expect(document.querySelectorAll("[data-slot='card']")).toHaveLength(2);
     expect(await screen.findByText("Estimated local storage: 1.5 KiB used of 2 KiB.")).toBeVisible();
     expect(screen.getByText("Persistent storage is not enabled.")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Request persistent storage" }));
 
     await waitFor(() => expect(persist).toHaveBeenCalledOnce());
+    expect(screen.getByRole("status")).toHaveAttribute("data-slot", "alert");
     expect(screen.getByRole("status")).toHaveTextContent("Persistent storage is enabled.");
     await expect(repository.getSnapshot()).resolves.toMatchObject({ exhibits: [{ title: "Harbor Queue" }] });
   });

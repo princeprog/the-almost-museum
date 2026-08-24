@@ -3,6 +3,7 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +14,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   BackupValidationError,
   exportCollectionBackup,
@@ -122,41 +133,48 @@ export function CollectionBackups({
   };
 
   return (
-    <section aria-labelledby="collection-backups-title" className="collection-backups">
-      <header>
+    <section aria-labelledby="collection-backups-title" className="grid gap-4">
+      <header className="grid gap-1">
         <p className="museum-eyebrow">Portable collection</p>
-        <h2 id="collection-backups-title">Back up your museum</h2>
-        <p>Exports include your Exhibits, timeline, and stored attachments. Restoring replaces this browser’s current collection only after you confirm the preview.</p>
+        <h2 className="text-xl font-medium" id="collection-backups-title">Back up your museum</h2>
+        <p className="text-sm text-muted-foreground">Exports include your Exhibits, timeline, and stored attachments. Restoring replaces this browser’s current collection only after you confirm the preview.</p>
       </header>
 
-      <section aria-labelledby="export-collection-title" className="collection-backups__section">
-        <div>
-          <h3 id="export-collection-title">Export</h3>
-          <p>Keep a JSON copy before clearing browser data or moving to another browser.</p>
-        </div>
-        <Button disabled={isWorking} onClick={() => void handleExport()}>Export collection</Button>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle><h3 id="export-collection-title">Export</h3></CardTitle>
+          <CardDescription>Keep a JSON copy before clearing browser data or moving to another browser.</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button className="min-h-11 w-full sm:min-h-8 sm:w-auto" disabled={isWorking} onClick={() => void handleExport()}>Export collection</Button>
+        </CardFooter>
+      </Card>
 
-      <section aria-labelledby="restore-collection-title" className="collection-backups__section">
-        <div>
-          <h3 id="restore-collection-title">Restore</h3>
-          <p>Choose an Almost Museum version 1 JSON backup to inspect it before replacing this collection.</p>
-        </div>
-        <label className="museum-field" htmlFor="backup-file">
-          <span className="museum-field__label">Choose backup file</span>
-          <input accept="application/json,.json" className="museum-input" disabled={isWorking} id="backup-file" onChange={(event) => void handleFileChange(event)} type="file" />
-        </label>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle><h3 id="restore-collection-title">Restore</h3></CardTitle>
+          <CardDescription>Choose an Almost Museum version 1 JSON backup to inspect it before replacing this collection.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Field>
+            <FieldLabel htmlFor="backup-file">Choose backup file</FieldLabel>
+            <Input accept="application/json,.json" className="min-h-11 sm:min-h-8" disabled={isWorking} id="backup-file" onChange={(event) => void handleFileChange(event)} type="file" />
+            <FieldDescription>The backup is validated and previewed before anything is replaced.</FieldDescription>
+          </Field>
+        </CardContent>
+      </Card>
 
       {preview !== undefined ? (
-        <section aria-label="Backup preview" className="collection-backups__preview">
-          <p>Ready to restore {countLabel(preview.exhibits, "Exhibit")}, {countLabel(preview.artifacts, "artifact")}, and {countLabel(preview.history, "history event")}.</p>
-          <p>This will replace the current collection. Export it first if you may need it later.</p>
-          <Button disabled={isWorking} onClick={() => setRestoreDialogOpen(true)} variant="destructive">Restore collection</Button>
-        </section>
+        <Alert aria-label="Backup preview">
+          <AlertDescription className="grid gap-3">
+            <p>Ready to restore {countLabel(preview.exhibits, "Exhibit")}, {countLabel(preview.artifacts, "artifact")}, and {countLabel(preview.history, "history event")}.</p>
+            <p>This will replace the current collection. Export it first if you may need it later.</p>
+            <Button className="min-h-11 w-full sm:w-fit" disabled={isWorking} onClick={() => setRestoreDialogOpen(true)} variant="destructive">Restore collection</Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
-      {message !== undefined ? <p role="status">{message}</p> : null}
-      {error !== undefined ? <p role="alert">{error}</p> : null}
+      {message !== undefined ? <Alert role="status"><AlertDescription>{message}</AlertDescription></Alert> : null}
+      {error !== undefined ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
 
       <AlertDialog onOpenChange={setRestoreDialogOpen} open={isRestoreDialogOpen}>
         <AlertDialogContent>

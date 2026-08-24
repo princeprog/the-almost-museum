@@ -38,6 +38,8 @@ describe("CollectionBackups", () => {
     expect(screen.getByRole("heading", { name: "Back up your museum", level: 2 })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Export", level: 3 })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Restore", level: 3 })).toBeVisible();
+    expect(document.querySelectorAll("[data-slot='card']")).toHaveLength(2);
+    expect(screen.getByLabelText("Choose backup file")).toHaveAttribute("data-slot", "input");
   });
 
   it("exports the repository collection as a downloadable version-one JSON file", async () => {

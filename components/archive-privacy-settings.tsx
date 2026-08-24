@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +14,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   getStorageStatus,
   requestPersistentStorage,
@@ -95,43 +105,55 @@ export function ArchivePrivacySettings({ repository: suppliedRepository, storage
   const isPersistenceRequestAvailable = storage?.persist !== undefined;
 
   return (
-    <section aria-labelledby="archive-privacy-title" className="archive-privacy-settings">
-      <header>
+    <section aria-labelledby="archive-privacy-title" className="grid gap-4">
+      <header className="grid gap-1">
         <p className="museum-eyebrow">Local collection</p>
-        <h2 id="archive-privacy-title">Storage &amp; privacy</h2>
-        <p>Your Exhibits and attachments stay in this browser unless you export a backup. The Almost Museum does not send your collection to a server.</p>
+        <h2 className="text-xl font-medium" id="archive-privacy-title">Storage &amp; privacy</h2>
+        <p className="text-sm text-muted-foreground">Your Exhibits and attachments stay in this browser unless you export a backup. The Almost Museum does not send your collection to a server.</p>
       </header>
 
-      <section aria-labelledby="storage-status-title" className="archive-privacy-settings__section">
-        <div>
-          <h3 id="storage-status-title">Storage on this device</h3>
+      <Card>
+        <CardHeader>
+          <CardTitle><h3 id="storage-status-title">Storage on this device</h3></CardTitle>
+          <CardDescription>Review what this browser can report about your local museum storage.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2">
           <p>{storageStatus?.estimate === undefined
             ? "This browser did not provide a storage estimate."
             : `Estimated local storage: ${storageStatus.estimate}.`}</p>
-          <p>{persistence === "persistent"
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={persistence === "persistent" ? "default" : "secondary"}>
+              {persistence === "persistent" ? "Persistent" : "Standard storage"}
+            </Badge>
+            <p className="text-muted-foreground">{persistence === "persistent"
             ? "Persistent storage is enabled."
             : persistence === "not-persistent"
               ? "Persistent storage is not enabled."
               : "This browser cannot report persistent-storage status."}</p>
-        </div>
+          </div>
+        </CardContent>
         {isPersistenceRequestAvailable && persistence !== "persistent" ? (
-          <Button disabled={isRequestingPersistence} onClick={() => void handleRequestPersistence()} variant="secondary">
-            {isRequestingPersistence ? "Requesting persistent storage…" : "Request persistent storage"}
-          </Button>
+          <CardFooter>
+            <Button className="min-h-11 w-full sm:min-h-8 sm:w-auto" disabled={isRequestingPersistence} onClick={() => void handleRequestPersistence()} variant="secondary">
+              {isRequestingPersistence ? "Requesting persistent storage…" : "Request persistent storage"}
+            </Button>
+          </CardFooter>
         ) : null}
-      </section>
+      </Card>
 
-      <section aria-labelledby="erase-collection-title" className="archive-privacy-settings__danger">
-        <div>
+      <Card>
+        <CardHeader>
           <p className="museum-eyebrow">Erase from this browser</p>
-          <h3 id="erase-collection-title">Erase all local data</h3>
-          <p>This permanently deletes every Exhibit, attachment, and timeline event saved in this browser. It cannot be undone here. Export a backup first if you may want to recover this collection.</p>
-        </div>
-        <Button disabled={isErasing} onClick={() => setEraseDialogOpen(true)} variant="destructive">Erase all local data</Button>
-      </section>
+          <CardTitle><h3 id="erase-collection-title">Erase all local data</h3></CardTitle>
+          <CardDescription>This permanently deletes every Exhibit, attachment, and timeline event saved in this browser. It cannot be undone here. Export a backup first if you may want to recover this collection.</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button className="min-h-11 w-full sm:min-h-8 sm:w-auto" disabled={isErasing} onClick={() => setEraseDialogOpen(true)} variant="destructive">Erase all local data</Button>
+        </CardFooter>
+      </Card>
 
-      {message !== undefined ? <p role="status">{message}</p> : null}
-      {error !== undefined ? <p role="alert">{error}</p> : null}
+      {message !== undefined ? <Alert role="status"><AlertDescription>{message}</AlertDescription></Alert> : null}
+      {error !== undefined ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
 
       <AlertDialog onOpenChange={setEraseDialogOpen} open={isEraseDialogOpen}>
         <AlertDialogContent>
