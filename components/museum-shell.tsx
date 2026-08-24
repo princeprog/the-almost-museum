@@ -17,7 +17,7 @@ export function MuseumShell({ children }: Readonly<{ children: ReactNode }>) {
     <>
       <div aria-hidden="true" className="museum-paper-texture" />
       <div className="museum-shell relative z-10 min-h-dvh pt-3 sm:pt-5">
-        <header className="site-header sticky top-0 z-50 mx-3 flex min-h-16 flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-landing-border bg-landing-card/95 px-4 py-3 text-landing-ink sm:mx-5 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:px-8">
+        <header className="site-header sticky top-0 z-50 mx-3 flex min-h-16 flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-landing-border bg-landing-card/95 px-4 py-3 text-landing-ink sm:mx-5 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:px-8">
           <a
             className="skip-link order-first ml-auto min-h-11 py-3 text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:text-foreground lg:col-start-3 lg:row-start-1 lg:justify-self-end"
             href="#app-root"

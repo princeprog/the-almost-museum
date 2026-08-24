@@ -44,6 +44,7 @@ describe("museum shell", () => {
     const museumLink = screen.getByRole("link", { name: "Museum" });
 
     expect(navigation).toBeVisible();
+    expect(screen.getByRole("banner")).toHaveClass("rounded-md");
     expect(screen.getByRole("link", { name: "Almost Museum home" }).querySelector("img")?.getAttribute("src"))
       .toContain("almost-museum-mark.png");
     expect(museumLink).toHaveClass("navigation-link--featured");

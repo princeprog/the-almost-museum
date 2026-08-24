@@ -22,7 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -335,8 +335,8 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
             <CardDescription className="max-w-2xl text-sm sm:text-base">{description}</CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-6">
-            <div aria-label="Capture steps" className="space-y-3">
+          <CardContent className="flex flex-col gap-6">
+            <div aria-label="Capture steps" className="flex flex-col gap-3">
               <Progress aria-label="Capture progress" value={progressValue} />
               <ol className="grid grid-cols-3 gap-2">
                 {captureSteps.map(([number, label]) => (
@@ -359,7 +359,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                 <AlertCircleIcon aria-hidden="true" />
                 <AlertTitle>Check the highlighted details</AlertTitle>
                 <AlertDescription>
-                  <ul className="list-disc space-y-1 pl-4">
+                  <ul className="flex list-disc flex-col gap-1 pl-4">
                     {errors.map((error) => <li key={error}>{error}</li>)}
                   </ul>
                 </AlertDescription>
@@ -372,8 +372,9 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                 <FieldGroup>
                   <Field data-invalid={formErrors.title !== undefined}>
                     <FieldLabel htmlFor="exhibit-title">Working title <span aria-hidden="true">*</span></FieldLabel>
-                    <Input aria-describedby="exhibit-title-hint" aria-invalid={formErrors.title !== undefined} autoFocus className={controlSizeClassName} id="exhibit-title" required {...register("title")} />
+                    <Input aria-describedby={cn("exhibit-title-hint", formErrors.title && "exhibit-title-error")} aria-invalid={formErrors.title !== undefined} autoFocus className={controlSizeClassName} id="exhibit-title" required {...register("title")} />
                     <FieldDescription id="exhibit-title-hint">A name can be tentative. It only needs to help you recognize this work.</FieldDescription>
+                    <FieldError errors={[formErrors.title]} id="exhibit-title-error" />
                   </Field>
                   <Controller
                     control={control}
@@ -389,6 +390,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                           value={field.value || null}
                         >
                           <SelectTrigger
+                            aria-describedby={formErrors.type ? "exhibit-type-error" : undefined}
                             aria-invalid={formErrors.type !== undefined}
                             className={`${selectControlSizeClassName} w-full`}
                             id="exhibit-type"
@@ -403,6 +405,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                             </SelectGroup>
                           </SelectContent>
                         </Select>
+                        <FieldError errors={[formErrors.type]} id="exhibit-type-error" />
                       </Field>
                     )}
                   />
@@ -420,6 +423,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                           value={field.value}
                         >
                           <SelectTrigger
+                            aria-describedby={formErrors.status ? "exhibit-status-error" : undefined}
                             aria-invalid={formErrors.status !== undefined}
                             className={`${selectControlSizeClassName} w-full`}
                             id="exhibit-status"
@@ -434,6 +438,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                             </SelectGroup>
                           </SelectContent>
                         </Select>
+                        <FieldError errors={[formErrors.status]} id="exhibit-status-error" />
                       </Field>
                     )}
                   />
@@ -493,12 +498,12 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                   </FieldGroup>
 
                 {evidence.length > 0 ? (
-                  <ul aria-label="Evidence waiting to be saved" className="space-y-3">
+                  <ul aria-label="Evidence waiting to be saved" className="flex flex-col gap-3">
                     {evidence.map((item, index) => (
                       <li key={`${item.kind}-${item.label}-${index}`}>
                         <Card size="sm">
                           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0 space-y-3">
+                            <div className="flex min-w-0 flex-col gap-3">
                               <div className="flex flex-wrap items-center gap-2">
                                 <strong className="break-words">{item.label}</strong>
                                 <Badge variant="outline">{evidenceKindLabels[item.kind]}</Badge>
@@ -530,8 +535,9 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                 <FieldGroup>
                   <Field data-invalid={formErrors.museumLabel !== undefined}>
                     <FieldLabel htmlFor="museum-label">Museum label <span aria-hidden="true">*</span></FieldLabel>
-                    <Input aria-describedby="museum-label-hint" aria-invalid={formErrors.museumLabel !== undefined} autoFocus className={controlSizeClassName} id="museum-label" required {...register("museumLabel")} />
+                    <Input aria-describedby={cn("museum-label-hint", formErrors.museumLabel && "museum-label-error")} aria-invalid={formErrors.museumLabel !== undefined} autoFocus className={controlSizeClassName} id="museum-label" required {...register("museumLabel")} />
                     <FieldDescription id="museum-label-hint">A small line that helps you remember what this was trying to become.</FieldDescription>
+                    <FieldError errors={[formErrors.museumLabel]} id="museum-label-error" />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="why-started">Why did this begin?</FieldLabel>

@@ -94,25 +94,32 @@ describe("ExhibitCapture", () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-capture-validation");
 
-    render(<ExhibitCapture repository={repository} />);
+    const { container } = render(<ExhibitCapture repository={repository} />);
 
     await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
 
     expect(screen.getByRole("heading", { name: "Give the work a place" })).toBeVisible();
-    const alert = screen.getByRole("alert");
+    const alert = container.querySelector('[data-slot="alert"]');
+    expect(alert).not.toBeNull();
     expect(alert).toHaveAttribute("data-slot", "alert");
     expect(alert).toHaveTextContent("Add a title before continuing.");
-    expect(screen.getByText("Choose an Exhibit type before continuing.")).toBeVisible();
+    expect(screen.getByText("Choose an Exhibit type before continuing.", { selector: '[data-slot="field-error"]' })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Working title" })).toHaveAttribute("aria-describedby", expect.stringContaining("exhibit-title-error"));
+    expect(screen.getByRole("textbox", { name: "Working title" }).parentElement).toContainElement(
+      screen.getByText("Add a title before continuing.", { selector: '[data-slot="field-error"]' }),
+    );
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveAttribute("aria-describedby", "exhibit-type-error");
   });
 
   it("moves keyboard focus to an assertive validation summary when a step cannot continue", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-capture-validation-focus");
 
-    render(<ExhibitCapture repository={repository} />);
+    const { container } = render(<ExhibitCapture repository={repository} />);
     await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
 
-    const summary = screen.getByRole("alert");
+    const summary = container.querySelector('[data-slot="alert"]');
+    expect(summary).not.toBeNull();
     expect(summary).toHaveFocus();
     expect(summary).toHaveTextContent("Add a title before continuing.");
   });
@@ -256,7 +263,7 @@ describe("ExhibitCapture", () => {
     await user.click(screen.getByRole("button", { name: "Continue to story" }));
 
     await user.click(screen.getByRole("button", { name: "Save Exhibit" }));
-    expect(screen.getByText("Add a museum label before saving.")).toBeVisible();
+    expect(screen.getByText("Add a museum label before saving.", { selector: '[data-slot="field-error"]' })).toBeVisible();
 
     await user.type(screen.getByRole("textbox", { name: "Museum label" }), "A quieter route through the harbor");
     await user.click(screen.getByRole("button", { name: "Save Exhibit" }));
