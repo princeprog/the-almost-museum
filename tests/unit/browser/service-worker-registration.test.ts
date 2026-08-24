@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   registerMuseumServiceWorker,
   shouldRegisterMuseumServiceWorker,
+  unregisterMuseumServiceWorkers,
 } from "@/lib/browser/service-worker-registration";
 
 describe("service-worker registration", () => {
@@ -29,5 +30,15 @@ describe("service-worker registration", () => {
     await registerMuseumServiceWorker({ controller: null, register }, onUpdate);
 
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("removes retained production workers before local development continues", async () => {
+    const unregister = vi.fn().mockResolvedValue(true);
+    const getRegistrations = vi.fn().mockResolvedValue([{ unregister }]);
+
+    await expect(unregisterMuseumServiceWorkers({ getRegistrations })).resolves.toBe(true);
+
+    expect(getRegistrations).toHaveBeenCalledOnce();
+    expect(unregister).toHaveBeenCalledOnce();
   });
 });

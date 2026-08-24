@@ -5,10 +5,16 @@ test("preserves online query-addressed Exhibit routes after service-worker activ
   await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration("/"))?.active?.scriptURL.endsWith("/sw.js") ?? false)).toBe(true);
   await page.reload();
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.endsWith("/sw.js") ?? false)).toBe(true);
-  await expect(page.locator("main.exhibit-capture")).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+  const main = page.getByRole("main");
+  await expect(main).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+  await expect(main).toHaveCSS("transform", "none");
 
   await page.getByRole("textbox", { name: "Working title" }).fill("Worker query route study");
-  await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
+  const typeSelect = page.getByRole("combobox", { name: "Exhibit type" });
+  await typeSelect.click();
+  await page.getByRole("option", { name: "Experiment" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(typeSelect).toContainText("Experiment");
   await page.getByRole("button", { name: "Continue to evidence" }).click();
   await page.getByRole("button", { name: "Continue to story" }).click();
   await page.getByRole("textbox", { name: "Museum label" }).fill("A query-addressed record behind the active worker");

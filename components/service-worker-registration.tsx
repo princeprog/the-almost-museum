@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   registerMuseumServiceWorker,
   shouldRegisterMuseumServiceWorker,
+  unregisterMuseumServiceWorkers,
 } from "@/lib/browser/service-worker-registration";
 
 /** Registers the worker only in production and gives people control over adopting a new shell. */
@@ -13,6 +14,11 @@ export function ServiceWorkerRegistration() {
   const [isUpdateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
+    if (navigator.serviceWorker === undefined) return;
+    if (process.env.NODE_ENV !== "production") {
+      void unregisterMuseumServiceWorkers(navigator.serviceWorker);
+      return;
+    }
     if (!shouldRegisterMuseumServiceWorker(process.env.NODE_ENV, navigator)) return;
 
     void registerMuseumServiceWorker(navigator.serviceWorker, () => setUpdateAvailable(true));
