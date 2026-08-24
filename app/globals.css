@@ -219,49 +219,45 @@ body:has(.landing-page) .museum-paper-texture {
 @keyframes landing-rise {
   from {
     opacity: 0;
-    transform: translate3d(0, 1rem, 0);
   }
 
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
   }
 }
 
 @keyframes landing-art-in {
   from {
     opacity: 0;
-    transform: translate3d(1.5rem, 0, 0) scale(0.985);
   }
 
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@keyframes landing-art-drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-
-  to {
-    transform: translate3d(0, -0.35rem, 0) scale(1.005);
   }
 }
 
 .landing-motion-up {
-  animation: landing-rise 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: none;
 }
 
 .landing-motion-art {
-  animation:
-    landing-art-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both,
-    landing-art-drift 14s 900ms ease-in-out infinite alternate;
+  animation: none;
   transform-origin: center;
 }
 
 .landing-motion-stagger > * {
+  animation: none;
+}
+
+.landing-reveal[data-reveal-state="visible"] .landing-motion-up {
+  animation: landing-rise 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-reveal[data-reveal-state="visible"] .landing-motion-art {
+  animation: landing-art-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-reveal[data-reveal-state="visible"] .landing-motion-stagger > * {
   animation: landing-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

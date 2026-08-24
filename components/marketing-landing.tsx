@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { LandingReveal } from "@/components/landing-reveal";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -347,7 +348,7 @@ function ExhibitGallery() {
         data-testid="exhibit-track"
       >
         {exhibits.map((exhibit) => (
-          <Card className="h-full min-h-[27rem] min-w-0 snap-start py-3 transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:shadow-md xl:min-h-0" key={exhibit.number}>
+          <Card className="h-full min-h-[27rem] min-w-0 snap-start py-3 transition-shadow duration-300 ease-out hover:shadow-md xl:min-h-0" key={exhibit.number}>
             <CardHeader className="gap-0 px-3">
               <CardDescription className="text-[0.65rem] font-medium tracking-wide text-landing-muted uppercase">
                 {exhibit.category}
@@ -511,21 +512,21 @@ function LandingFooter() {
 export function MarketingLanding() {
   return (
     <main className="landing-page marketing-theme w-full max-w-none overflow-x-clip bg-landing-surface text-landing-ink">
-      <div className="landing-screen min-h-svh scroll-mt-24 lg:snap-start">
+      <LandingReveal className="landing-screen min-h-svh scroll-mt-24 lg:snap-start">
         <HeroSection />
-      </div>
-      <div className="landing-screen flex min-h-svh scroll-mt-4 flex-col bg-landing-gallery lg:snap-start">
+      </LandingReveal>
+      <LandingReveal className="landing-screen flex min-h-svh scroll-mt-4 flex-col bg-landing-gallery lg:snap-start">
         <BenefitStrip />
         <ExhibitGallery />
-      </div>
-      <div className="landing-screen flex min-h-svh scroll-mt-4 flex-col gap-8 bg-landing-card py-6 lg:snap-start">
+      </LandingReveal>
+      <LandingReveal className="landing-screen flex min-h-svh scroll-mt-4 flex-col gap-8 bg-landing-card py-6 lg:snap-start">
         <HowItWorks />
         <ValueStrip />
-      </div>
-      <div className="landing-screen flex min-h-svh scroll-mt-4 flex-col bg-landing-surface pt-4 lg:snap-start">
+      </LandingReveal>
+      <LandingReveal className="landing-screen flex min-h-svh scroll-mt-4 flex-col bg-landing-surface pt-4 lg:snap-start">
         <ClosingCallToAction />
         <LandingFooter />
-      </div>
+      </LandingReveal>
     </main>
   );
 }

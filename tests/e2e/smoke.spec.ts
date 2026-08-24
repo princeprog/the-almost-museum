@@ -207,6 +207,20 @@ test("disables landing scroll snapping for reduced motion", async ({ page }) => 
   expect(motion.scrollSnapType).toBe("none");
 });
 
+test("reveals each landing chapter when it enters the viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const sections = page.locator(".landing-screen");
+  await expect(sections).toHaveCount(4);
+  await expect(sections.nth(0)).toHaveAttribute("data-reveal-state", "visible");
+
+  for (let index = 1; index < 4; index += 1) {
+    await sections.nth(index).scrollIntoViewIfNeeded();
+    await expect(sections.nth(index)).toHaveAttribute("data-reveal-state", "visible");
+  }
+});
+
 test("captures an Exhibit through the exported clean routes", async ({ page }) => {
   await openHydratedCapture(page);
 

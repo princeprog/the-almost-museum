@@ -30,6 +30,7 @@
 - Offline and shared states: recovery Card/Alert, generated service worker, update Alert action, skip-link focus, and sticky navigation verified.
 - Local-first workflows remain functional: onboarding, gallery filtering, capture, editing, artifacts, transformations, closure ceremonies, backup/restore/erase, and offline recovery.
 - Narrow-screen controls retain 44 px touch targets, media remains contained, and no page-level horizontal overflow was detected.
+- Landing chapters use one-shot, opacity-only reveals when they enter the viewport; the responsive scroll-through check covers all four chapters across Chromium, Firefox, and WebKit.
 - Reduced-motion behavior disables landing snapping and smooth motion.
 
 ## Verification evidence
