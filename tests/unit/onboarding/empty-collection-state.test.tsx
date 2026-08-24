@@ -12,7 +12,7 @@ describe("EmptyCollectionState", () => {
 
     expect(screen.getByRole("heading", { name: "Your collection is empty." })).toBeVisible();
     expect(screen.getByRole("link", { name: "Create Exhibit" })).toHaveAttribute("href", "/exhibit/new");
-    expect(screen.getByRole("link", { name: "Create Exhibit" })).toHaveAttribute("data-slot", "button");
+    expect(screen.getByRole("link", { name: "Create Exhibit" })).not.toHaveAttribute("role", "button");
     expect(screen.getByRole("button", { name: "Install Harbor Queue demo" })).toBeVisible();
     expect(onInstallDemo).not.toHaveBeenCalled();
   });

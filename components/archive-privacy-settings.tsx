@@ -118,7 +118,7 @@ export function ArchivePrivacySettings({ repository: suppliedRepository, storage
           <h3 id="erase-collection-title">Erase all local data</h3>
           <p>This permanently deletes every Exhibit, attachment, and timeline event saved in this browser. It cannot be undone here. Export a backup first if you may want to recover this collection.</p>
         </div>
-        <Button disabled={isErasing} onClick={() => setEraseDialogOpen(true)} variant="danger">Erase all local data</Button>
+        <Button disabled={isErasing} onClick={() => setEraseDialogOpen(true)} variant="destructive">Erase all local data</Button>
       </section>
 
       {message !== undefined ? <p role="status">{message}</p> : null}
@@ -132,7 +132,7 @@ export function ArchivePrivacySettings({ repository: suppliedRepository, storage
       >
         <div className="archive-privacy-settings__dialog-actions">
           <Button disabled={isErasing} onClick={() => setEraseDialogOpen(false)} variant="secondary">Cancel</Button>
-          <Button disabled={isErasing} onClick={() => void handleErase()} variant="danger">
+          <Button disabled={isErasing} onClick={() => void handleErase()} variant="destructive">
             {isErasing ? "Erasing local data…" : "Erase all data"}
           </Button>
         </div>

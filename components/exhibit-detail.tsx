@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent 
 
 import { AlmostTimeline } from "@/components/almost-timeline";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -128,7 +128,7 @@ function ArtifactCard({ artifact, onRemove }: Readonly<{ artifact: Artifact; onR
           <Badge variant="outline">{formatLabel(artifact.kind)}</Badge>
           <h3>{artifact.label}</h3>
         </div>
-        <Button onClick={() => onRemove(artifact)} variant="quiet">Remove {artifact.label}</Button>
+        <Button onClick={() => onRemove(artifact)} variant="ghost">Remove {artifact.label}</Button>
       </div>
       <ArtifactPreview artifact={artifact} />
     </li>
@@ -472,7 +472,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
   }
 
   if (exhibitId === undefined) {
-    return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Exhibit</p><h1>Choose an Exhibit</h1><p>Open an Exhibit from the Museum to visit its story and artifacts.</p><Button asChild variant="secondary"><Link href="/museum">Return to the Museum</Link></Button></main>;
+    return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Exhibit</p><h1>Choose an Exhibit</h1><p>Open an Exhibit from the Museum to visit its story and artifacts.</p><Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link></main>;
   }
   if (loadError) {
     return (
@@ -482,14 +482,14 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
         <p role="alert">This Exhibit could not be opened. Your local records have not been changed. Try opening this Exhibit again when the browser is ready.</p>
         <div className="exhibit-detail__actions">
           <Button onClick={() => setLoadAttempt((current) => current + 1)}>Try opening this Exhibit again</Button>
-          <Button asChild variant="secondary"><Link href="/museum">Return to the Museum</Link></Button>
+          <Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link>
         </div>
       </main>
     );
   }
   if (isLoading || (!isMissing && exhibit?.id !== exhibitId)) return <main className="exhibit-detail"><p role="status">Opening this Exhibit…</p></main>;
   if (isMissing || exhibit === undefined) {
-    return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Not found</p><h1>That Exhibit is not here</h1><p>It may have been removed, or the link may be incomplete.</p><Button asChild variant="secondary"><Link href="/museum">Return to the Museum</Link></Button></main>;
+    return <main className="exhibit-detail exhibit-detail--missing"><p className="museum-eyebrow">Not found</p><h1>That Exhibit is not here</h1><p>It may have been removed, or the link may be incomplete.</p><Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link></main>;
   }
 
   const rooms = getExhibitRooms(exhibit);
@@ -502,7 +502,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
           <p>{exhibit.museumLabel}</p>
         </div>
         <div className="exhibit-detail__actions">
-          <Button asChild variant="quiet"><Link href="/museum">Museum</Link></Button>
+          <Link className={buttonVariants({ variant: "ghost" })} href="/museum">Museum</Link>
           <Button onClick={() => { setFormValues(exhibit); setIsEditing(true); }}>Edit Exhibit</Button>
           {(["revive", "archive", "complete", "transform", "release"] as ClosureAction[])
             .filter((action) => canApplyClosureAction(exhibit, action))
@@ -515,13 +515,13 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       {isEditing ? (
         <form className="exhibit-detail__edit" noValidate onSubmit={saveChanges}>
           <h2>Edit this Exhibit</h2>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-title">Working title</FieldLabel><Input id="detail-title" label="" onChange={(event) => setTitle(event.target.value)} value={title} /></Field>
+          <Field className="museum-field"><FieldLabel htmlFor="detail-title">Working title</FieldLabel><Input id="detail-title" onChange={(event) => setTitle(event.target.value)} value={title} /></Field>
           <Field className="museum-field"><FieldLabel htmlFor="detail-type">Exhibit type</FieldLabel><NativeSelect className="w-full" id="detail-type" onChange={(event) => setType(event.target.value as ExhibitType)} value={type}>{exhibitTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</NativeSelect></Field>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-label">Museum label</FieldLabel><Input id="detail-label" label="" onChange={(event) => setMuseumLabel(event.target.value)} value={museumLabel} /></Field>
+          <Field className="museum-field"><FieldLabel htmlFor="detail-label">Museum label</FieldLabel><Input id="detail-label" onChange={(event) => setMuseumLabel(event.target.value)} value={museumLabel} /></Field>
           <Field className="museum-field"><FieldLabel htmlFor="detail-started">Why it started</FieldLabel><Textarea id="detail-started" onChange={(event) => setWhyStarted(event.target.value)} value={whyStarted} /></Field>
           <Field className="museum-field"><FieldLabel htmlFor="detail-stopped">Why it stopped</FieldLabel><Textarea id="detail-stopped" onChange={(event) => setWhyStopped(event.target.value)} value={whyStopped} /></Field>
           <Field className="museum-field"><FieldLabel htmlFor="detail-taught">What it taught me</FieldLabel><Textarea id="detail-taught" onChange={(event) => setWhatItTaughtMe(event.target.value)} value={whatItTaughtMe} /></Field>
-          <Field className="museum-field"><FieldLabel htmlFor="detail-tags">Tags</FieldLabel><Input id="detail-tags" label="" onChange={(event) => setTags(event.target.value)} value={tags} /></Field>
+          <Field className="museum-field"><FieldLabel htmlFor="detail-tags">Tags</FieldLabel><Input id="detail-tags" onChange={(event) => setTags(event.target.value)} value={tags} /></Field>
           <div className="exhibit-detail__actions"><Button type="submit">Save changes</Button><Button onClick={() => setIsEditing(false)} variant="secondary">Cancel editing</Button></div>
         </form>
       ) : (
@@ -541,8 +541,8 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
         <header><p className="museum-eyebrow">Artifacts</p><h2 id="artifact-title">Kept with this Exhibit</h2></header>
         {artifacts.length > 0 ? <ul>{artifacts.map((artifact) => <ArtifactCard artifact={artifact} key={artifact.id} onRemove={removeArtifact} />)}</ul> : <p>Nothing is attached yet. A note, link, or local file can stay with this work.</p>}
         <div className="exhibit-detail__attachment-forms">
-          <div><h3>Add a link</h3><Field className="museum-field"><FieldLabel htmlFor="detail-link-label">Link label</FieldLabel><Input id="detail-link-label" label="" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} /></Field><Field className="museum-field"><FieldLabel htmlFor="detail-link-address">Link address</FieldLabel><Input id="detail-link-address" label="" onChange={(event) => setLinkAddress(event.target.value)} value={linkAddress} /></Field><Button onClick={() => void addLink()} variant="secondary">Add link</Button></div>
-          <div><h3>Add a note</h3><Field className="museum-field"><FieldLabel htmlFor="detail-note-label">Note label</FieldLabel><Input id="detail-note-label" label="" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} /></Field><Field className="museum-field"><FieldLabel htmlFor="detail-note">Note</FieldLabel><Textarea id="detail-note" onChange={(event) => setNote(event.target.value)} value={note} /></Field><Button onClick={() => void addNote()} variant="secondary">Add note</Button></div>
+          <div><h3>Add a link</h3><Field className="museum-field"><FieldLabel htmlFor="detail-link-label">Link label</FieldLabel><Input id="detail-link-label" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} /></Field><Field className="museum-field"><FieldLabel htmlFor="detail-link-address">Link address</FieldLabel><Input id="detail-link-address" onChange={(event) => setLinkAddress(event.target.value)} value={linkAddress} /></Field><Button onClick={() => void addLink()} variant="secondary">Add link</Button></div>
+          <div><h3>Add a note</h3><Field className="museum-field"><FieldLabel htmlFor="detail-note-label">Note label</FieldLabel><Input id="detail-note-label" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} /></Field><Field className="museum-field"><FieldLabel htmlFor="detail-note">Note</FieldLabel><Textarea id="detail-note" onChange={(event) => setNote(event.target.value)} value={note} /></Field><Button onClick={() => void addNote()} variant="secondary">Add note</Button></div>
           <div><h3>Add a local file</h3><label className="museum-field" htmlFor="detail-file"><span className="museum-field__label">Image, PDF, or audio</span><input accept="image/*,application/pdf,audio/*" className="museum-input" id="detail-file" onChange={(event) => void addFile(event)} type="file" /></label></div>
         </div>
       </section>
@@ -564,7 +564,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
                 <label className="museum-field exhibit-detail__choice"><input checked={transformMode === "existing"} name="transform-target" onChange={() => setTransformMode("existing")} type="radio" /> <span>Create a link to an existing Exhibit</span></label>
                 {transformMode === "existing" ? <Field className="museum-field"><FieldLabel htmlFor="transform-existing">Existing Exhibit</FieldLabel><NativeSelect className="w-full" id="transform-existing" onChange={(event) => setRelatedExhibitId(event.target.value)} value={relatedExhibitId}><option value="">Choose an Exhibit</option>{transformCandidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.title} — {candidate.museumLabel}</option>)}</NativeSelect></Field> : null}
                 <label className="museum-field exhibit-detail__choice"><input checked={transformMode === "new"} name="transform-target" onChange={() => setTransformMode("new")} type="radio" /> <span>Create a new Exhibit</span></label>
-                {transformMode === "new" ? <div className="exhibit-detail__new-target"><Field className="museum-field"><FieldLabel htmlFor="transform-new-title">New Exhibit title</FieldLabel><Input id="transform-new-title" label="" onChange={(event) => setNewExhibitTitle(event.target.value)} value={newExhibitTitle} /></Field><Field className="museum-field"><FieldLabel htmlFor="transform-new-type">New Exhibit type</FieldLabel><NativeSelect className="w-full" id="transform-new-type" onChange={(event) => setNewExhibitType(event.target.value as ExhibitType)} value={newExhibitType}>{exhibitTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</NativeSelect></Field><Field className="museum-field"><FieldLabel htmlFor="transform-new-label">New Exhibit label</FieldLabel><Input id="transform-new-label" label="" onChange={(event) => setNewExhibitLabel(event.target.value)} value={newExhibitLabel} /></Field></div> : null}
+                {transformMode === "new" ? <div className="exhibit-detail__new-target"><Field className="museum-field"><FieldLabel htmlFor="transform-new-title">New Exhibit title</FieldLabel><Input id="transform-new-title" onChange={(event) => setNewExhibitTitle(event.target.value)} value={newExhibitTitle} /></Field><Field className="museum-field"><FieldLabel htmlFor="transform-new-type">New Exhibit type</FieldLabel><NativeSelect className="w-full" id="transform-new-type" onChange={(event) => setNewExhibitType(event.target.value as ExhibitType)} value={newExhibitType}>{exhibitTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</NativeSelect></Field><Field className="museum-field"><FieldLabel htmlFor="transform-new-label">New Exhibit label</FieldLabel><Input id="transform-new-label" onChange={(event) => setNewExhibitLabel(event.target.value)} value={newExhibitLabel} /></Field></div> : null}
               </>
             ) : null}
             {closureAction === "release" ? <label className="museum-field exhibit-detail__choice"><input checked={releaseAcknowledged} onChange={(event) => setReleaseAcknowledged(event.target.checked)} type="checkbox" /> <span>I understand this Exhibit will be released from the active collection.</span></label> : null}

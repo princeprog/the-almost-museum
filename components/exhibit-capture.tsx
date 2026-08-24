@@ -10,7 +10,7 @@ import { validateArtifactFile, type ValidatedFileArtifact } from "@/lib/artifact
 import { getStorageQuotaWarning } from "@/lib/artifacts/storage-quota";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
@@ -26,6 +26,7 @@ import {
   type ValidatedExhibitCaptureFormValues,
 } from "@/lib/forms/exhibit-capture-form";
 import { ExhibitRepository, type CaptureArtifactInput } from "@/lib/persistence";
+import { cn } from "@/lib/utils";
 
 const exhibitTypes: Array<{ value: ExhibitType; label: string }> = [
   { value: "project", label: "Project" },
@@ -320,7 +321,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
               <span className="font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase">New Exhibit</span>
             </div>
             <CardTitle>
-              <h1 className="m-0 font-display text-3xl leading-tight font-normal sm:text-4xl">{heading}</h1>
+              <h1 className="m-0 text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">{heading}</h1>
             </CardTitle>
             <CardDescription className="max-w-2xl text-sm sm:text-base">{description}</CardDescription>
           </CardHeader>
@@ -358,11 +359,11 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
 
             {step === 1 ? (
               <FieldSet>
-                <FieldLegend className="font-display text-xl">Identity</FieldLegend>
+                <FieldLegend className="text-xl">Identity</FieldLegend>
                 <FieldGroup>
                   <Field data-invalid={formErrors.title !== undefined}>
                     <FieldLabel htmlFor="exhibit-title">Working title <span aria-hidden="true">*</span></FieldLabel>
-                    <Input aria-describedby="exhibit-title-hint" aria-invalid={formErrors.title !== undefined} autoFocus className={controlSizeClassName} id="exhibit-title" label="" required {...register("title")} />
+                    <Input aria-describedby="exhibit-title-hint" aria-invalid={formErrors.title !== undefined} autoFocus className={controlSizeClassName} id="exhibit-title" required {...register("title")} />
                     <FieldDescription id="exhibit-title-hint">A name can be tentative. It only needs to help you recognize this work.</FieldDescription>
                   </Field>
                   <Controller
@@ -429,7 +430,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                   />
                   <Field>
                     <FieldLabel htmlFor="exhibit-tags">Tags</FieldLabel>
-                    <Input aria-describedby="exhibit-tags-hint" className={controlSizeClassName} id="exhibit-tags" label="" placeholder="Research, harbor, maybe later" {...register("tags")} />
+                    <Input aria-describedby="exhibit-tags-hint" className={controlSizeClassName} id="exhibit-tags" placeholder="Research, harbor, maybe later" {...register("tags")} />
                     <FieldDescription id="exhibit-tags-hint">Separate tags with commas. They are for finding your way back, not for grading the work.</FieldDescription>
                   </Field>
                 </FieldGroup>
@@ -438,12 +439,12 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
 
             {step === 2 ? (
               <FieldSet>
-                <FieldLegend className="font-display text-xl">Evidence</FieldLegend>
+                <FieldLegend className="text-xl">Evidence</FieldLegend>
                 <FieldDescription>Each trace is optional. Images, PDFs, and audio stay in this browser alongside links and notes.</FieldDescription>
                 <FieldGroup>
                   <Field>
                     <FieldLabel htmlFor="artifact-file">Choose an image, PDF, or audio file</FieldLabel>
-                    <Input accept="image/*,application/pdf,audio/*" className={controlSizeClassName} id="artifact-file" label="" onChange={handleFileSelection} type="file" />
+                    <Input accept="image/*,application/pdf,audio/*" className={controlSizeClassName} id="artifact-file" onChange={handleFileSelection} type="file" />
                     <FieldDescription>Up to 25 MiB per file. Your browser keeps these files in this private collection.</FieldDescription>
                   </Field>
                   {quotaWarning ? (
@@ -459,11 +460,11 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                   <FieldGroup>
                     <Field>
                       <FieldLabel htmlFor="link-label">Link label</FieldLabel>
-                      <Input className={controlSizeClassName} id="link-label" label="" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} />
+                      <Input className={controlSizeClassName} id="link-label" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} />
                     </Field>
                     <Field>
                       <FieldLabel htmlFor="link-address">Link address</FieldLabel>
-                      <Input className={controlSizeClassName} id="link-address" label="" onChange={(event) => setLinkAddress(event.target.value)} placeholder="https://" type="url" value={linkAddress} />
+                      <Input className={controlSizeClassName} id="link-address" onChange={(event) => setLinkAddress(event.target.value)} placeholder="https://" type="url" value={linkAddress} />
                     </Field>
                     <Button className="min-h-11 justify-self-start sm:min-h-8" onClick={addLink} type="button" variant="outline">Add link</Button>
                   </FieldGroup>
@@ -473,7 +474,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                   <FieldGroup>
                     <Field>
                       <FieldLabel htmlFor="note-label">Note label</FieldLabel>
-                      <Input className={controlSizeClassName} id="note-label" label="" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} />
+                      <Input className={controlSizeClassName} id="note-label" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} />
                     </Field>
                     <Field>
                       <FieldLabel htmlFor="exhibit-note">Note</FieldLabel>
@@ -500,9 +501,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                                   {item.kind === "image" ? <img alt={`Preview of ${item.fileName}`} className="max-h-60 max-w-full rounded-lg border object-contain" src={item.previewUrl} /> : null}
                                   {item.kind === "pdf" ? <iframe aria-label={`Preview of ${item.fileName}`} className="h-60 w-full max-w-md rounded-lg border" src={item.previewUrl} title={`Preview of ${item.fileName}`} /> : null}
                                   {item.kind === "audio" ? <audio aria-label={`Preview of ${item.fileName}`} className="max-w-full" controls src={item.previewUrl} /> : null}
-                                  <Button asChild className="min-h-11 justify-self-start sm:min-h-8" variant="outline">
-                                    <a download={item.fileName} href={item.previewUrl}>Download {item.fileName}</a>
-                                  </Button>
+                                  <a className={cn(buttonVariants({ variant: "outline" }), "min-h-11 justify-self-start sm:min-h-8")} download={item.fileName} href={item.previewUrl}>Download {item.fileName}</a>
                                 </div>
                               ) : null}
                             </div>
@@ -518,11 +517,11 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
 
             {step === 3 ? (
               <FieldSet>
-                <FieldLegend className="font-display text-xl">Story</FieldLegend>
+                <FieldLegend className="text-xl">Story</FieldLegend>
                 <FieldGroup>
                   <Field data-invalid={formErrors.museumLabel !== undefined}>
                     <FieldLabel htmlFor="museum-label">Museum label <span aria-hidden="true">*</span></FieldLabel>
-                    <Input aria-describedby="museum-label-hint" aria-invalid={formErrors.museumLabel !== undefined} autoFocus className={controlSizeClassName} id="museum-label" label="" required {...register("museumLabel")} />
+                    <Input aria-describedby="museum-label-hint" aria-invalid={formErrors.museumLabel !== undefined} autoFocus className={controlSizeClassName} id="museum-label" required {...register("museumLabel")} />
                     <FieldDescription id="museum-label-hint">A small line that helps you remember what this was trying to become.</FieldDescription>
                   </Field>
                   <Field>

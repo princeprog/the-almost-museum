@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -193,9 +193,7 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
           <h1 id="museum-gallery-title">{roomLabel}</h1>
           <p>Move gently between rooms. Nothing here needs to earn its place.</p>
         </div>
-        <Button asChild>
-          <Link href="/exhibit/new">Create Exhibit</Link>
-        </Button>
+        <Link className={buttonVariants()} href="/exhibit/new">Create Exhibit</Link>
       </header>
 
       <Separator />
@@ -232,7 +230,6 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
               <Input
                 aria-describedby="gallery-search-description"
                 id="gallery-search"
-                label=""
                 onChange={(event) => setFilterControls((current) => ({ ...current, query: event.target.value }))}
                 placeholder="Title, label, or tag"
                 type="search"

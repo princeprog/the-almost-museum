@@ -1,14 +1,8 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter, Newsreader } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import { MuseumShell } from "@/components/museum-shell";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import "./globals.css";
-
-const newsreader = Newsreader({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-newsreader",
-});
 
 const inter = Inter({
   display: "swap",
@@ -31,7 +25,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
-      className={`${newsreader.variable} ${inter.variable} ${geistMono.variable}`}
+      className={`${inter.variable} ${geistMono.variable}`}
       data-scroll-behavior="smooth"
       lang="en"
     >

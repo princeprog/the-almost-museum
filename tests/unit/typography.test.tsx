@@ -9,9 +9,6 @@ vi.mock("next/font/google", () => ({
   Inter: ({ variable }: { variable: string }) => ({
     variable: `inter(${variable})`,
   }),
-  Newsreader: ({ variable }: { variable: string }) => ({
-    variable: `newsreader(${variable})`,
-  }),
 }));
 
 import RootLayout from "../../app/layout";
@@ -22,11 +19,10 @@ const globalsCss = readFileSync(
 );
 
 describe("museum typography", () => {
-  it("exposes each bundled font variable class from the root layout", () => {
+  it("exposes the landing typography variables from the root layout", () => {
     const layout = RootLayout({ children: <main>Museum</main> });
 
     expect(layout.props.className?.split(/\s+/)).toEqual([
-      "newsreader(--font-newsreader)",
       "inter(--font-inter)",
       "geist-mono(--font-geist-mono)",
     ]);
@@ -34,7 +30,7 @@ describe("museum typography", () => {
 
   it("maps the existing CSS and Tailwind aliases to bundled font variables", () => {
     const expectedMappings = [
-      '--font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;',
+      '--font-display: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;',
       '--font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;',
       '--font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, "Liberation Mono", monospace;',
     ];

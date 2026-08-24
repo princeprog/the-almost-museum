@@ -143,7 +143,7 @@ export function CollectionBackups({
         <section aria-label="Backup preview" className="collection-backups__preview">
           <p>Ready to restore {countLabel(preview.exhibits, "Exhibit")}, {countLabel(preview.artifacts, "artifact")}, and {countLabel(preview.history, "history event")}.</p>
           <p>This will replace the current collection. Export it first if you may need it later.</p>
-          <Button disabled={isWorking} onClick={() => setRestoreDialogOpen(true)} variant="danger">Restore collection</Button>
+          <Button disabled={isWorking} onClick={() => setRestoreDialogOpen(true)} variant="destructive">Restore collection</Button>
         </section>
       ) : null}
       {message !== undefined ? <p role="status">{message}</p> : null}
@@ -157,7 +157,7 @@ export function CollectionBackups({
       >
         <div className="collection-backups__dialog-actions">
           <Button disabled={isWorking} onClick={() => setRestoreDialogOpen(false)} variant="secondary">Cancel</Button>
-          <Button disabled={isWorking} onClick={() => void handleRestore()} variant="danger">Replace collection</Button>
+          <Button disabled={isWorking} onClick={() => void handleRestore()} variant="destructive">Replace collection</Button>
         </div>
       </Dialog>
     </section>

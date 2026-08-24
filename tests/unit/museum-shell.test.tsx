@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import HomePage from "../../app/page";
 import { MuseumShell } from "../../components/museum-shell";
 import { Dialog } from "../../components/ui/dialog";
+import { Field, FieldDescription, FieldLabel } from "../../components/ui/field";
 import { Input } from "../../components/ui/input";
 
 function DialogTriggerHarness() {
@@ -90,20 +91,31 @@ describe("museum shell", () => {
     expect(trigger).toHaveFocus();
   });
 
-  it("creates unique input IDs and retains every description reference", () => {
+  it("composes labelled inputs with explicit descriptions", () => {
     render(
       <>
         <p id="collection-guidance">This label is shared across the collection.</p>
-        <Input aria-describedby="collection-guidance" hint="Give it a working name." label="Title" />
-        <Input label="Title" />
-        <Input id="source-title" label="Source title" />
+        <Field>
+          <FieldLabel htmlFor="working-title">Title</FieldLabel>
+          <Input aria-describedby="collection-guidance working-title-hint" id="working-title" />
+          <FieldDescription id="working-title-hint">Give it a working name.</FieldDescription>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="alternate-title">Title</FieldLabel>
+          <Input id="alternate-title" />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="source-title">Source title</FieldLabel>
+          <Input id="source-title" />
+        </Field>
       </>,
     );
 
     const [firstInput, secondInput] = screen.getAllByRole("textbox", { name: "Title" });
     const firstDescriptions = firstInput.getAttribute("aria-describedby")?.split(" ") ?? [];
 
-    expect(firstInput.id).not.toBe(secondInput.id);
+    expect(firstInput).toHaveAttribute("id", "working-title");
+    expect(secondInput).toHaveAttribute("id", "alternate-title");
     expect(firstDescriptions).toContain("collection-guidance");
     expect(firstDescriptions).toContain(`${firstInput.id}-hint`);
     expect(screen.getByRole("textbox", { name: "Source title" })).toHaveAttribute("id", "source-title");

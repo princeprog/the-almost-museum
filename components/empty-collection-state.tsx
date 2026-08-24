@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -38,9 +38,7 @@ export function EmptyCollectionState({ onInstallDemo }: Readonly<EmptyCollection
         </p>
       </CardContent>
       <CardFooter className="flex-wrap gap-2">
-        <Button asChild>
-          <Link href="/exhibit/new">Create Exhibit</Link>
-        </Button>
+        <Link className={buttonVariants()} href="/exhibit/new">Create Exhibit</Link>
         <Button aria-describedby="harbor-queue-demo-description" onClick={onInstallDemo} variant="outline">
           Install Harbor Queue demo
         </Button>

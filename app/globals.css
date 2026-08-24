@@ -21,7 +21,7 @@
   --danger-deep: #943b3b;
   --border: var(--landing-border);
   --border-strong: var(--landing-line);
-  --font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-display: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --space-1: 0.25rem;
@@ -167,24 +167,11 @@ textarea {
   h1,
   h2,
   h3 {
-    font-family: var(--font-display);
-    font-weight: 500;
-    letter-spacing: -0.035em;
-    line-height: 1.06;
-  }
-
-  h1 {
-    font-size: clamp(2.75rem, 8vw, 6.25rem);
-    margin-bottom: var(--space-5);
-  }
-
-  h2 {
-    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-family: var(--font-sans);
   }
 
   p {
     color: var(--charcoal-muted);
-    font-size: 1.05rem;
   }
 }
 
@@ -876,7 +863,7 @@ body:has(.landing-page) .museum-paper-texture {
 }
 
 @theme inline {
-  --font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  --font-display: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --color-sidebar-ring: var(--sidebar-ring);

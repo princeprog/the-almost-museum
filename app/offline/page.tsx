@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export default function OfflinePage() {
   return (
@@ -8,7 +8,7 @@ export default function OfflinePage() {
       <p className="museum-eyebrow">Connection unavailable</p>
       <h1>You can still visit the Museum.</h1>
       <p>The saved collection and the pages you opened are available on this device. Reconnect when you are ready to load something new.</p>
-      <Button asChild><Link href="/museum">Try the Museum again</Link></Button>
+      <Link className={buttonVariants()} href="/museum">Try the Museum again</Link>
     </main>
   );
 }
