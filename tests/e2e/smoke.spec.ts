@@ -113,13 +113,14 @@ for (const viewport of [
   { height: 812, name: "phone", width: 375 },
   { height: 1024, name: "tablet", width: 768 },
   { height: 900, name: "desktop", width: 1440 },
+  { height: 1080, name: "ultrawide", width: 1920 },
 ] as const) {
   test(`keeps the shadcn Museum collection responsive on ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/museum");
 
     const emptyCollection = page.getByRole("region", { name: "Your collection is empty." });
-    await expect(emptyCollection).toHaveAttribute("data-slot", "card");
+    await expect(emptyCollection).toHaveAttribute("data-slot", "empty");
     await expect(page.getByRole("link", { name: "Create Exhibit" })).toBeVisible();
 
     await page.getByRole("button", { name: "Install Harbor Queue demo" }).click();
@@ -135,6 +136,39 @@ for (const viewport of [
       viewportWidth: window.innerWidth,
     }));
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth);
+  });
+}
+
+for (const viewport of landingViewports) {
+  test(`keeps application routes contained on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+    for (const route of ["/museum", "/exhibit/new", "/exhibit", "/settings", "/offline"]) {
+      await page.goto(route);
+      const main = page.getByRole("main");
+      await expect(main).toBeVisible();
+      if (route === "/exhibit/new") await expect(main).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+
+      const layout = await page.evaluate(() => ({
+        controls: Array.from(document.querySelectorAll('[data-slot="button"], [data-slot="input"], [data-slot="select-trigger"], a[class*="group/button"]'))
+          .filter((element) => {
+            const style = getComputedStyle(element);
+            return style.display !== "none" && style.visibility !== "hidden";
+          })
+          .map((element) => ({
+            height: element.getBoundingClientRect().height,
+            label: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? element.getAttribute("type") ?? element.tagName,
+          })),
+        scrollWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+      }));
+
+      expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth);
+      if (viewport.width === 375) {
+        const undersizedControls = layout.controls.filter(({ height }) => height > 0 && height < 44);
+        expect(undersizedControls, JSON.stringify(undersizedControls)).toEqual([]);
+      }
+    }
   });
 }
 
@@ -178,7 +212,7 @@ test("captures an Exhibit through the exported clean routes", async ({ page }) =
   await page.getByRole("button", { name: "Save Exhibit" }).click();
 
   await expect(page).toHaveURL(/\/exhibit\?id=/);
-  await expect(page.getByRole("heading", { name: "Exhibit" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Harbor wayfinding study" })).toBeVisible();
 });
 
 test("moves focus to the surviving Exhibit heading after a closure replaces its trigger", async ({ page }) => {
@@ -246,7 +280,7 @@ for (const viewport of [
       const leaveBox = await page.getByRole("button", { name: "Leave without saving" }).boundingBox();
       expect(keepBox).not.toBeNull();
       expect(leaveBox).not.toBeNull();
-      expect(keepBox!.y).toBeLessThan(leaveBox!.y);
+      expect(leaveBox!.y).toBeLessThan(keepBox!.y);
     }
   });
 }

@@ -6,6 +6,7 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:3000",
+    serviceWorkers: "block",
     trace: "on-first-retry",
   },
   webServer: {
@@ -33,7 +34,7 @@ export default defineConfig({
     {
       name: "chromium-offline",
       testMatch: "**/offline.spec.ts",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], serviceWorkers: "allow" },
     },
   ],
 });

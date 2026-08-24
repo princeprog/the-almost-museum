@@ -1,7 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
-// Playwright provisions a new browser context and IndexedDB namespace per test.
-// An explicit empty storage state also keeps local UI preferences out of parallel runs.
+// These stateful journeys exercise IndexedDB, downloads, and file restoration. Keeping
+// this file serial avoids browser-engine resource contention while smoke tests stay parallel.
+test.describe.configure({ mode: "serial" });
+
+// An explicit empty storage state keeps local UI preferences out of each journey.
 test.use({ storageState: { cookies: [], origins: [] } });
 
 type ExhibitInput = {
@@ -17,6 +20,13 @@ async function openHydratedCapture(page: Page): Promise<void> {
   const main = page.getByRole("main");
   await expect(main).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
   await expect(main).toHaveCSS("transform", "none");
+}
+
+async function chooseOption(page: Page, name: string, label: string, scope: Page | Locator = page): Promise<void> {
+  const trigger = scope.getByRole("combobox", { name });
+  await trigger.click();
+  await page.getByRole("option", { name: label }).click();
+  await expect(trigger).toContainText(label);
 }
 
 async function captureExhibit(page: Page, {
@@ -138,38 +148,38 @@ test("filters and searches the gallery across rooms, type, status, and tags", as
   await captureExhibit(page, { title: "Quiet archive draft", tags: "Archive, Notes", type: "project" });
   await page.getByRole("button", { name: "Move to Archive", exact: true }).click();
   await page.getByRole("dialog", { name: "Move to Archive?" }).getByRole("button", { name: "Archive Exhibit" }).click();
-  await expect(page.getByText("Project / Archived")).toBeVisible();
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Archived" })).toBeVisible();
 
   await page.goto("/museum");
   await page.getByRole("button", { name: "Workshop", exact: true }).click();
   await page.getByRole("searchbox", { name: "Search collection" }).fill("signal");
   await expect(page.getByRole("list", { name: "Exhibits" })).toContainText("Harbor signal experiment");
   await expect(page.getByRole("list", { name: "Exhibits" })).not.toContainText("Quiet archive draft");
-  await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
-  await page.getByRole("combobox", { name: "Tag" }).selectOption("Signals");
+  await chooseOption(page, "Exhibit type", "Experiment");
+  await chooseOption(page, "Tag", "Signals");
   await expect(page.getByRole("status", { name: "Gallery result count" })).toHaveText("1 exhibit in Workshop");
 
   await page.getByRole("button", { name: "Archive", exact: true }).click();
   await page.getByRole("searchbox", { name: "Search collection" }).fill("Quiet");
-  await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("all");
-  await page.getByRole("combobox", { name: "Tag" }).selectOption("all");
-  await page.getByRole("combobox", { name: "Status" }).selectOption("archived");
+  await chooseOption(page, "Exhibit type", "All types");
+  await chooseOption(page, "Tag", "All tags");
+  await chooseOption(page, "Status", "Archived");
   await expect(page.getByRole("list", { name: "Exhibits" })).toContainText("Quiet archive draft");
   await page.getByRole("searchbox", { name: "Search collection" }).fill("missing");
   await expect(page.getByRole("heading", { name: "Nothing is hidden here." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Archive", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("searchbox", { name: "Search collection" })).toHaveValue("missing");
-  await expect(page.getByRole("combobox", { name: "Exhibit type" })).toHaveValue("all");
-  await expect(page.getByRole("combobox", { name: "Status" })).toHaveValue("archived");
-  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveValue("all");
+  await expect(page.getByRole("combobox", { name: "Exhibit type" })).toContainText("All types");
+  await expect(page.getByRole("combobox", { name: "Status" })).toContainText("Archived");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toContainText("All tags");
   await expect(page.getByRole("link", { name: "Quiet archive draft" })).toHaveCount(0);
   await expect(page.getByRole("status", { name: "Gallery result count" })).toHaveText("0 exhibits in Archive");
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.getByRole("button", { name: "Lobby", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("searchbox", { name: "Search collection" })).toHaveValue("");
-  await expect(page.getByRole("combobox", { name: "Exhibit type" })).toHaveValue("all");
-  await expect(page.getByRole("combobox", { name: "Status" })).toHaveValue("all");
-  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveValue("all");
+  await expect(page.getByRole("combobox", { name: "Exhibit type" })).toContainText("All types");
+  await expect(page.getByRole("combobox", { name: "Status" })).toContainText("All statuses");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toContainText("All tags");
   await expect(page.getByRole("link", { name: "Quiet archive draft" })).toBeVisible();
   await expect(page.getByRole("status", { name: "Gallery result count" })).toHaveText("2 exhibits in Lobby");
 });
@@ -177,21 +187,21 @@ test("filters and searches the gallery across rooms, type, status, and tags", as
 test("records archive, complete, release, and revive closure ceremonies", async ({ page }) => {
   const archiveId = await captureExhibit(page, { title: "Archive ceremony" });
   await confirmClosure(page, "Move to Archive", "Move to Archive?", "Archive Exhibit");
-  await expect(page.getByText("Project / Archived")).toBeVisible();
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Archived" })).toBeVisible();
   await confirmClosure(page, "Revive", "Revive this Exhibit?", "Revive Exhibit");
-  await expect(page.getByText("Project / Revived")).toBeVisible();
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Revived" })).toBeVisible();
 
   const completeId = await captureExhibit(page, { title: "Completion ceremony" });
   await confirmClosure(page, "Complete", "Complete this Exhibit?", "Complete Exhibit");
-  await expect(page.getByText("Project / Completed")).toBeVisible();
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Completed" })).toBeVisible();
   await confirmClosure(page, "Revive", "Revive this Exhibit?", "Revive Exhibit");
-  await expect(page.getByText("Project / Revived")).toBeVisible();
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Revived" })).toBeVisible();
 
   const releaseId = await captureExhibit(page, { title: "Release ceremony" });
   await confirmClosure(page, "Release", "Release this Exhibit?", "Release Exhibit");
-  await expect(page.getByText("Project / Released")).toBeVisible();
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Released" })).toBeVisible();
   await confirmClosure(page, "Revive", "Revive this Exhibit?", "Revive Exhibit");
-  await expect(page.getByText("Project / Revived")).toBeVisible();
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Revived" })).toBeVisible();
 
   for (const id of [archiveId, completeId, releaseId]) {
     await page.goto(`/exhibit?id=${id}`);
@@ -200,14 +210,14 @@ test("records archive, complete, release, and revive closure ceremonies", async 
 });
 
 test("transforms an Exhibit into both an existing and a newly captured Exhibit", async ({ page }) => {
-  const targetId = await captureExhibit(page, { title: "Existing successor", label: "A connected next attempt" });
+  await captureExhibit(page, { title: "Existing successor", label: "A connected next attempt" });
   const sourceId = await captureExhibit(page, { title: "Existing transformation source" });
   await page.getByRole("button", { name: "Transform", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Transform this Exhibit?" });
-  await dialog.getByRole("combobox", { name: "Existing Exhibit" }).selectOption(targetId);
+  await chooseOption(page, "Existing Exhibit", "Existing successor", dialog);
   await dialog.getByRole("button", { name: "Transform Exhibit" }).click();
-  await expect(page.getByText("Project / Transformed")).toBeVisible();
-  await expect(page.getByRole("status")).toHaveText("This Exhibit has been transformed and linked.");
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Transformed" })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("This Exhibit has been transformed and linked.");
 
   await captureExhibit(page, { title: "New transformation source" });
   await page.getByRole("button", { name: "Transform", exact: true }).click();
@@ -216,7 +226,7 @@ test("transforms an Exhibit into both an existing and a newly captured Exhibit",
   await newDialog.getByRole("textbox", { name: "New Exhibit title" }).fill("New successor");
   await newDialog.getByRole("textbox", { name: "New Exhibit label" }).fill("A new record made from the first one");
   await newDialog.getByRole("button", { name: "Transform Exhibit" }).click();
-  await expect(page.getByText("Project / Transformed")).toBeVisible();
+  await expect(page.locator('[data-slot="badge"]').filter({ hasText: "Transformed" })).toBeVisible();
 
   await page.goto("/museum");
   await page.getByRole("button", { name: "Hall of Second Chances", exact: true }).click();
@@ -239,16 +249,16 @@ test("exports, previews, restores, and rejects backups without overwriting the c
   expect(JSON.parse(backupJson.toString())).toMatchObject({ format: "almost-museum", version: 1 });
 
   await page.getByRole("button", { name: "Erase all local data" }).click();
-  await page.getByRole("dialog", { name: "Erase all local museum data?" }).getByRole("button", { name: "Erase all data" }).click();
+  await page.getByRole("alertdialog", { name: "Erase all local museum data?" }).getByRole("button", { name: "Erase all data" }).click();
   await expect(page.getByText("All local museum records have been erased. Restore a backup to recover them.", { exact: true })).toBeVisible();
   await page.goto("/museum");
   await expect(page.getByRole("heading", { name: "Your collection is empty." })).toBeVisible();
 
   await page.goto("/settings");
   await page.getByLabel("Choose backup file").setInputFiles({ name: "almost-museum-backup.json", mimeType: "application/json", buffer: backupJson });
-  await expect(page.getByRole("region", { name: "Backup preview" })).toContainText("Ready to restore 1 Exhibit, 2 artifacts");
+  await expect(page.getByRole("alert", { name: "Backup preview" })).toContainText("Ready to restore 1 Exhibit, 2 artifacts", { timeout: 15_000 });
   await page.getByRole("button", { name: "Restore collection" }).click();
-  await page.getByRole("dialog", { name: "Replace this collection?" }).getByRole("button", { name: "Replace collection" }).click();
+  await page.getByRole("alertdialog", { name: "Replace this collection?" }).getByRole("button", { name: "Replace collection" }).click();
   await expect(page.getByRole("status")).toHaveText("Collection restored from backup.");
   await page.getByLabel("Choose backup file").setInputFiles({ name: "not-a-backup.json", mimeType: "application/json", buffer: Buffer.from('{"format":"elsewhere"}') });
   await expect(page.getByText("Choose a valid version 1 Almost Museum JSON backup.", { exact: true })).toBeVisible();
