@@ -42,13 +42,12 @@ function defaultDownload(json: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-function readFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("The backup file could not be read."));
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.readAsText(file);
-  });
+async function readFile(file: File): Promise<string> {
+  try {
+    return await file.text();
+  } catch {
+    throw new Error("The backup file could not be read.");
+  }
 }
 
 function backupFilename(date: Date): string {

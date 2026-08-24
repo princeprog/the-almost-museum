@@ -521,7 +521,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       <main className="mx-auto w-full max-w-2xl">
         <Empty className="border">
           <EmptyHeader><EmptyTitle aria-level={1} role="heading">Choose an Exhibit</EmptyTitle><EmptyDescription>Open an Exhibit from the Museum to visit its story and artifacts.</EmptyDescription></EmptyHeader>
-          <EmptyContent><Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link></EmptyContent>
+          <EmptyContent><Link className={buttonVariants({ className: "min-h-11 sm:min-h-8", variant: "secondary" })} href="/museum">Return to the Museum</Link></EmptyContent>
         </Empty>
       </main>
     );
@@ -534,8 +534,8 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
           <AlertDescription>Your local records have not been changed. Try opening this Exhibit again when the browser is ready.</AlertDescription>
         </Alert>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setLoadAttempt((current) => current + 1)}>Try opening this Exhibit again</Button>
-          <Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link>
+          <Button className="min-h-11 sm:min-h-8" onClick={() => setLoadAttempt((current) => current + 1)}>Try opening this Exhibit again</Button>
+          <Link className={buttonVariants({ className: "min-h-11 sm:min-h-8", variant: "secondary" })} href="/museum">Return to the Museum</Link>
         </div>
       </main>
     );
@@ -548,7 +548,7 @@ export function ExhibitDetail({ repository: suppliedRepository, search }: Readon
       <main className="mx-auto w-full max-w-2xl">
         <Empty className="border">
           <EmptyHeader><EmptyTitle aria-level={1} role="heading">That Exhibit is not here</EmptyTitle><EmptyDescription>It may have been removed, or the link may be incomplete.</EmptyDescription></EmptyHeader>
-          <EmptyContent><Link className={buttonVariants({ variant: "secondary" })} href="/museum">Return to the Museum</Link></EmptyContent>
+          <EmptyContent><Link className={buttonVariants({ className: "min-h-11 sm:min-h-8", variant: "secondary" })} href="/museum">Return to the Museum</Link></EmptyContent>
         </Empty>
       </main>
     );

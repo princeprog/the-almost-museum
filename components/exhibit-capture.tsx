@@ -491,7 +491,6 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                     </Field>
                     <Button className="min-h-11 justify-self-start sm:min-h-8" onClick={addNote} type="button" variant="outline">Add note</Button>
                   </FieldGroup>
-                </FieldGroup>
 
                 {evidence.length > 0 ? (
                   <ul aria-label="Evidence waiting to be saved" className="space-y-3">
@@ -521,6 +520,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
                     ))}
                   </ul>
                 ) : null}
+                </FieldGroup>
               </FieldSet>
             ) : null}
 
