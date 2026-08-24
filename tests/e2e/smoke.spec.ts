@@ -123,6 +123,21 @@ for (const viewport of [
     await expect(emptyCollection).toHaveAttribute("data-slot", "empty");
     await expect(page.getByRole("link", { name: "Create Exhibit" })).toBeVisible();
 
+    const emptyLayout = await emptyCollection.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      const bounds = element.getBoundingClientRect();
+      return {
+        alignItems: styles.alignItems,
+        centerOffset: Math.abs(bounds.left + bounds.width / 2 - window.innerWidth / 2),
+        justifyContent: styles.justifyContent,
+        minHeight: bounds.height,
+      };
+    });
+    expect(emptyLayout.alignItems).toBe("center");
+    expect(emptyLayout.centerOffset).toBeLessThanOrEqual(1);
+    expect(emptyLayout.justifyContent).toBe("center");
+    expect(emptyLayout.minHeight).toBeGreaterThan(0);
+
     await page.getByRole("button", { name: "Install Harbor Queue demo" }).click();
 
     const filters = page.getByRole("region", { name: "Filter collection" });

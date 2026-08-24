@@ -61,7 +61,7 @@ export function MuseumShell({ children }: Readonly<{ children: ReactNode }>) {
           </nav>
         </header>
         <div
-          className="app-root mx-auto min-h-px max-w-[var(--content-width)] px-[var(--page-gutter)] py-[var(--space-8)] has-[>.landing-page]:max-w-none has-[>.landing-page]:px-3 has-[>.landing-page]:py-0 sm:has-[>.landing-page]:px-5 [&>main:not(.landing-page)]:max-w-[46rem] [&>main:has(.museum-collection)]:max-w-none"
+          className="app-root mx-auto min-h-px max-w-[var(--content-width)] px-[var(--page-gutter)] py-[var(--space-8)] has-[>.landing-page]:max-w-none has-[>.landing-page]:px-3 has-[>.landing-page]:py-0 has-[>.museum-page]:max-w-none sm:has-[>.landing-page]:px-5 [&>main:not(.landing-page)]:max-w-[46rem] [&>main.museum-page]:max-w-none [&>main:has(.museum-collection)]:max-w-none"
           id="app-root"
           tabIndex={-1}
         >
