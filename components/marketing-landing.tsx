@@ -231,7 +231,7 @@ function HeroSection() {
       className="grid min-h-svh overflow-hidden bg-landing-hero md:grid-cols-[minmax(0,44%)_minmax(0,56%)]"
       aria-labelledby="landing-title"
     >
-      <div className="z-10 flex flex-col justify-center px-6 py-12 sm:px-10 md:px-8 md:py-16 lg:pl-[clamp(3rem,5vw,6rem)]">
+      <div className="landing-motion-up z-10 flex flex-col justify-center px-6 py-12 sm:px-10 md:px-8 md:py-16 lg:pl-[clamp(3rem,5vw,6rem)]">
         <p className="mb-6 flex items-center gap-2 text-xs font-medium text-landing-ink sm:text-sm">
           <Circle aria-hidden="true" className="size-2 fill-current text-landing-accent" />
           A private archive for the in-between
@@ -273,7 +273,7 @@ function HeroSection() {
       <div className="relative min-h-[19rem] sm:min-h-[27rem] md:min-h-full">
         <Image
           alt="A layered architectural exhibit for Modular Shelter Study with sketches, material samples, versions, and curator notes"
-          className="object-contain object-center"
+          className="landing-motion-art object-contain object-center"
           fill
           priority
           sizes="(max-width: 767px) 100vw, 59vw"
@@ -287,7 +287,7 @@ function HeroSection() {
 function BenefitStrip() {
   return (
     <section
-      className="grid grid-cols-2 border-y bg-landing-card px-3 py-4 sm:px-6 lg:grid-cols-4 lg:px-10 lg:py-6"
+      className="landing-motion-stagger grid grid-cols-2 border-y bg-landing-card px-3 py-4 sm:px-6 lg:grid-cols-4 lg:px-10 lg:py-6"
       aria-label="Why preserve unfinished work"
     >
       {benefits.map(({ title, description, icon: Icon, tone }, index) => (
@@ -342,12 +342,12 @@ function ExhibitGallery() {
       <div
         className={cn(
           trackClasses,
-          "relative grid flex-1 auto-cols-[minmax(16rem,78vw)] grid-flow-col items-stretch gap-4 pb-3 sm:auto-cols-[20rem] xl:grid-flow-row xl:auto-cols-auto xl:grid-cols-5 xl:overflow-visible xl:pb-0",
+          "landing-motion-stagger relative grid flex-1 auto-cols-[minmax(16rem,78vw)] grid-flow-col items-stretch gap-4 pb-3 sm:auto-cols-[20rem] xl:grid-flow-row xl:auto-cols-auto xl:grid-cols-5 xl:overflow-visible xl:pb-0",
         )}
         data-testid="exhibit-track"
       >
         {exhibits.map((exhibit) => (
-          <Card className="h-full min-h-[27rem] min-w-0 snap-start py-3 xl:min-h-0" key={exhibit.number}>
+          <Card className="h-full min-h-[27rem] min-w-0 snap-start py-3 transition-[transform,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:shadow-md xl:min-h-0" key={exhibit.number}>
             <CardHeader className="gap-0 px-3">
               <CardDescription className="text-[0.65rem] font-medium tracking-wide text-landing-muted uppercase">
                 {exhibit.category}
@@ -418,7 +418,7 @@ function HowItWorks() {
       <ol
         className={cn(
           trackClasses,
-          "relative grid list-none auto-cols-[minmax(12rem,74vw)] grid-flow-col gap-4 pb-3 sm:auto-cols-[minmax(12rem,42vw)] lg:grid-flow-row lg:grid-cols-4 lg:gap-0 lg:overflow-visible lg:pb-0 before:absolute before:top-10 before:right-[9%] before:left-[9%] before:hidden before:border-t before:border-dashed before:border-landing-line lg:before:block",
+          "landing-motion-stagger relative grid list-none auto-cols-[minmax(12rem,74vw)] grid-flow-col gap-4 pb-3 sm:auto-cols-[minmax(12rem,42vw)] lg:grid-flow-row lg:grid-cols-4 lg:gap-0 lg:overflow-visible lg:pb-0 before:absolute before:top-10 before:right-[9%] before:left-[9%] before:hidden before:border-t before:border-dashed before:border-landing-line lg:before:block",
         )}
         data-testid="workflow-track"
       >
@@ -449,7 +449,7 @@ function ValueStrip() {
     <section
       className={cn(
         trackClasses,
-        "mx-3 grid auto-cols-[minmax(15rem,78vw)] grid-flow-col rounded-xl bg-landing-values px-3 py-4 sm:mx-6 sm:auto-cols-[minmax(15rem,58vw)] lg:mx-10 lg:grid-flow-row lg:grid-cols-4 lg:overflow-visible lg:px-6 lg:py-6",
+        "landing-motion-stagger mx-3 grid auto-cols-[minmax(15rem,78vw)] grid-flow-col rounded-xl bg-landing-values px-3 py-4 sm:mx-6 sm:auto-cols-[minmax(15rem,58vw)] lg:mx-10 lg:grid-flow-row lg:grid-cols-4 lg:overflow-visible lg:px-6 lg:py-6",
       )}
       data-testid="value-track"
       aria-label="Almost Museum values"
@@ -474,7 +474,7 @@ function ValueStrip() {
 
 function ClosingCallToAction() {
   return (
-    <section className="relative mx-3 min-h-[calc(100svh-5rem)] flex-1 overflow-hidden rounded-xl bg-landing-dark sm:mx-6 lg:mx-10" aria-labelledby="closing-cta-title">
+    <section className="landing-motion-up relative mx-3 min-h-[calc(100svh-5rem)] flex-1 overflow-hidden rounded-xl bg-landing-dark sm:mx-6 lg:mx-10" aria-labelledby="closing-cta-title">
       <Image alt="" aria-hidden="true" className="object-cover object-[62%_center] sm:object-center" fill sizes="100vw" src="/landing/closing-doorway.png" />
       <div className="relative z-10 flex min-h-[calc(100svh-5rem)] flex-col items-start justify-center px-6 py-12 text-landing-on-dark sm:px-12 lg:px-16">
         <h2 className="mb-4 max-w-[15ch] font-sans text-[clamp(2.25rem,5vw,4.25rem)] leading-[1.08] font-semibold tracking-tight" id="closing-cta-title">

@@ -193,10 +193,16 @@ test("disables landing scroll snapping for reduced motion", async ({ page }) => 
   await page.goto("/");
 
   const motion = await page.evaluate(() => ({
+    animationNames: [
+      ".landing-motion-up",
+      ".landing-motion-art",
+      '[data-testid="exhibit-track"] > [data-slot="card"]',
+    ].map((selector) => getComputedStyle(document.querySelector(selector) as Element).animationName),
     scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
     scrollSnapType: getComputedStyle(document.documentElement).scrollSnapType,
   }));
 
+  expect(motion.animationNames).toEqual(["none", "none", "none"]);
   expect(motion.scrollBehavior).toBe("auto");
   expect(motion.scrollSnapType).toBe("none");
 });
