@@ -1,5 +1,5 @@
 import Dexie from "dexie";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -56,6 +56,29 @@ afterEach(async () => {
 });
 
 describe("MuseumGallery", () => {
+  it("composes the collection controls and exhibits from complete shadcn cards", async () => {
+    const repository = createRepository("almost-museum-gallery-shadcn-cards");
+    await seedCollection(repository);
+
+    render(<MuseumGallery repository={repository} />);
+
+    const filters = await screen.findByRole("region", { name: "Filter collection" });
+    expect(filters).toHaveAttribute("data-slot", "card");
+    expect(filters.querySelector('[data-slot="card-header"]')).toBeInTheDocument();
+    expect(filters.querySelector('[data-slot="card-content"]')).toBeInTheDocument();
+
+    const exhibits = screen.getByRole("list", { name: "Exhibits" });
+    const exhibitCards = within(exhibits).getAllByRole("article");
+    expect(exhibitCards).toHaveLength(3);
+
+    for (const card of exhibitCards) {
+      expect(card).toHaveAttribute("data-slot", "card");
+      expect(card.querySelector('[data-slot="card-header"]')).toBeInTheDocument();
+      expect(card.querySelector('[data-slot="card-content"]')).toBeInTheDocument();
+      expect(card.querySelector('[data-slot="card-footer"]')).toBeInTheDocument();
+    }
+  });
+
   it("uses a single-value room toggle group with keyboard navigation", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-gallery-room-toggle-group");
@@ -166,7 +189,7 @@ describe("MuseumGallery", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Show grid view" })).toBeVisible());
     expect(screen.getByRole("combobox", { name: "Sort collection" })).toHaveValue("title-asc");
-    expect(screen.getByRole("list", { name: "Exhibits" })).toHaveClass("museum-gallery__cards--list");
+    expect(screen.getByRole("list", { name: "Exhibits" })).toHaveAttribute("data-view", "list");
   });
 
   it("explains a failed local read and lets a visitor retry the collection", async () => {

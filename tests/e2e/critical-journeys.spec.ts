@@ -14,7 +14,9 @@ type ExhibitInput = {
 
 async function openHydratedCapture(page: Page): Promise<void> {
   await page.goto("/exhibit/new");
-  await expect(page.locator("main.exhibit-capture")).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+  const main = page.getByRole("main");
+  await expect(main).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+  await expect(main).toHaveCSS("transform", "none");
 }
 
 async function captureExhibit(page: Page, {
@@ -26,7 +28,12 @@ async function captureExhibit(page: Page, {
 }: ExhibitInput): Promise<string> {
   await openHydratedCapture(page);
   await page.getByRole("textbox", { name: "Working title" }).fill(title);
-  await page.getByRole("combobox", { name: "Exhibit type" }).selectOption(type);
+  const typeLabel = type[0]!.toUpperCase() + type.slice(1);
+  const typeSelect = page.getByRole("combobox", { name: "Exhibit type" });
+  await typeSelect.click();
+  await page.getByRole("option", { name: typeLabel }).focus();
+  await page.keyboard.press("Enter");
+  await expect(typeSelect).toContainText(typeLabel);
   await page.getByRole("textbox", { name: "Tags" }).fill(tags);
   await page.getByRole("button", { name: "Continue to evidence" }).click();
 

@@ -1,17 +1,23 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircleIcon, HardDriveIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { validateArtifactFile, type ValidatedFileArtifact } from "@/lib/artifacts/file-validation";
 import { getStorageQuotaWarning } from "@/lib/artifacts/storage-quota";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { ExhibitStatus, ExhibitType } from "@/lib/domain";
 import {
@@ -34,6 +40,8 @@ const initialStatuses: Array<{ value: Extract<ExhibitStatus, "unfinished" | "act
   { value: "active", label: "Active" },
 ];
 
+const captureSteps = [[1, "Identity"], [2, "Evidence"], [3, "Story"]] as const;
+
 interface LinkEvidenceDraft {
   kind: "link";
   label: string;
@@ -52,7 +60,18 @@ interface FileEvidenceDraft extends ValidatedFileArtifact {
 
 type EvidenceDraft = LinkEvidenceDraft | NoteEvidenceDraft | FileEvidenceDraft;
 
+const evidenceKindLabels = {
+  audio: "Audio",
+  image: "Image",
+  link: "Link",
+  note: "Note",
+  pdf: "PDF",
+} satisfies Record<EvidenceDraft["kind"], string>;
+
 const identityFields = ["title", "type", "status"] as const;
+const controlSizeClassName = "h-11 sm:h-10";
+const selectControlSizeClassName = "data-[size=default]:h-11 sm:data-[size=default]:h-10";
+const textareaSizeClassName = "min-h-28";
 
 export interface ExhibitCaptureProps {
   repository?: ExhibitRepository;
@@ -90,6 +109,7 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
   const prefersReducedMotion = useReducedMotion();
   const {
     clearErrors,
+    control,
     formState: { errors: formErrors },
     handleSubmit: submitValidatedForm,
     register,
@@ -276,143 +296,272 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
     }
   }
 
+  const heading = step === 1 ? "Give the work a place" : step === 2 ? "Keep a trace of it" : "Tell its story";
+  const description = step === 1
+    ? "A working name is enough. You can return to these details later."
+    : step === 2
+      ? "Add a link or note if it helps hold the shape of the work."
+      : "A few words of context can keep this Exhibit human and available to you.";
+  const progressValue = Math.round((step / 3) * 100);
+
   return (
     <motion.main
       animate={{ opacity: 1, y: 0 }}
       aria-busy={!isHydrated}
-      className="exhibit-capture"
+      className="mx-auto w-full max-w-3xl font-sans"
       initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
       transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.35, ease: "easeOut" }}
     >
-      <header className="exhibit-capture__header">
-        <p className="museum-eyebrow">New Exhibit</p>
-        <h1>{step === 1 ? "Give the work a place" : step === 2 ? "Keep a trace of it" : "Tell its story"}</h1>
-        <p>
-          {step === 1
-            ? "A working name is enough. You can return to these details later."
-            : step === 2
-              ? "Add a link or note if it helps hold the shape of the work."
-              : "A few words of context can keep this Exhibit human and available to you."}
-        </p>
-      </header>
-
-      <div className="exhibit-capture__progress" aria-label="Capture steps">
-        <progress aria-label="Capture progress" max={3} value={step} />
-        <ol>
-          {[[1, "Identity"], [2, "Evidence"], [3, "Story"]].map(([number, label]) => (
-            <li aria-current={step === number ? "step" : undefined} key={String(number)}>
-              <span aria-hidden="true">{number}</span>{label}
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <form className="exhibit-capture__step-panel" noValidate onSubmit={(event) => void handleStepSubmit(event)}>
-        {errors.length > 0 ? (
-          <div aria-live="assertive" className="exhibit-capture__errors" ref={errorSummaryRef} role="alert" tabIndex={-1}>
-            {errors.map((error) => <p key={error}>{error}</p>)}
-          </div>
-        ) : null}
-
-        {step === 1 ? (
-          <fieldset>
-            <legend>Identity</legend>
-            <Field className="museum-field">
-              <FieldLabel htmlFor="exhibit-title">Working title <span aria-hidden="true">*</span></FieldLabel>
-              <Input aria-describedby="exhibit-title-hint" autoFocus id="exhibit-title" label="" required {...register("title")} />
-              <FieldDescription id="exhibit-title-hint">A name can be tentative. It only needs to help you recognize this work.</FieldDescription>
-            </Field>
-            <Field className="museum-field">
-              <FieldLabel htmlFor="exhibit-type">Exhibit type <span aria-hidden="true">*</span></FieldLabel>
-              <NativeSelect className="w-full" id="exhibit-type" required {...register("type")}>
-                <option value="">Choose a type</option>
-                {exhibitTypes.map(({ label, value }) => <option key={value} value={value}>{label}</option>)}
-              </NativeSelect>
-            </Field>
-            <Field className="museum-field">
-              <FieldLabel htmlFor="exhibit-status">Initial status <span aria-hidden="true">*</span></FieldLabel>
-              <NativeSelect className="w-full" id="exhibit-status" required {...register("status")}>
-                {initialStatuses.map(({ label, value }) => <option key={value} value={value}>{label}</option>)}
-              </NativeSelect>
-            </Field>
-            <Field className="museum-field">
-              <FieldLabel htmlFor="exhibit-tags">Tags</FieldLabel>
-              <Input aria-describedby="exhibit-tags-hint" id="exhibit-tags" label="" placeholder="Research, harbor, maybe later" {...register("tags")} />
-              <FieldDescription id="exhibit-tags-hint">Separate tags with commas. They are for finding your way back, not for grading the work.</FieldDescription>
-            </Field>
-          </fieldset>
-        ) : null}
-
-        {step === 2 ? (
-          <fieldset>
-            <legend>Evidence</legend>
-            <p className="exhibit-capture__field-note">Each trace is optional. Images, PDFs, and audio stay in this browser alongside links and notes.</p>
-            <div className="exhibit-capture__evidence-form">
-              <label className="museum-field" htmlFor="artifact-file">
-                <span className="museum-field__label">Choose an image, PDF, or audio file</span>
-                <input accept="image/*,application/pdf,audio/*" className="museum-input" id="artifact-file" onChange={handleFileSelection} type="file" />
-                <span className="museum-field__hint">Up to 25 MiB per file. Your browser keeps these files in this private collection.</span>
-              </label>
-              {quotaWarning ? <p className="exhibit-capture__quota-warning" role="status">{quotaWarning}</p> : null}
+      <Card className="w-full [--card-spacing:--spacing(5)] sm:[--card-spacing:--spacing(6)]">
+        <form className="contents" noValidate onSubmit={(event) => void handleStepSubmit(event)}>
+          <CardHeader className="gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">Step {step} of 3</Badge>
+              <span className="font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase">New Exhibit</span>
             </div>
-            <div className="exhibit-capture__evidence-form">
-              <Field className="museum-field"><FieldLabel htmlFor="link-label">Link label</FieldLabel><Input id="link-label" label="" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} /></Field>
-              <Field className="museum-field"><FieldLabel htmlFor="link-address">Link address</FieldLabel><Input id="link-address" label="" onChange={(event) => setLinkAddress(event.target.value)} placeholder="https://" type="url" value={linkAddress} /></Field>
-              <Button onClick={addLink} type="button" variant="secondary">Add link</Button>
-            </div>
-            <div className="exhibit-capture__evidence-form">
-              <Field className="museum-field"><FieldLabel htmlFor="note-label">Note label</FieldLabel><Input id="note-label" label="" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} /></Field>
-              <Field className="museum-field"><FieldLabel htmlFor="exhibit-note">Note</FieldLabel><Textarea id="exhibit-note" onChange={(event) => setNote(event.target.value)} rows={4} value={note} /></Field>
-              <Button onClick={addNote} type="button" variant="secondary">Add note</Button>
-            </div>
-            {evidence.length > 0 ? (
-              <ul className="exhibit-capture__evidence-list" aria-label="Evidence waiting to be saved">
-                {evidence.map((item, index) => (
-                  <li key={`${item.kind}-${item.label}-${index}`}>
-                    <div>
-                      <span><strong>{item.label}</strong> <small>{item.kind === "link" ? "Link" : item.kind === "note" ? "Note" : item.kind}</small></span>
-                      {"previewUrl" in item ? (
-                        <div className="exhibit-capture__file-preview">
-                          {/* eslint-disable-next-line @next/next/no-img-element -- Local Blob previews require an object URL. */}
-                          {item.kind === "image" ? <img alt={`Preview of ${item.fileName}`} src={item.previewUrl} /> : null}
-                          {item.kind === "pdf" ? <iframe aria-label={`Preview of ${item.fileName}`} src={item.previewUrl} title={`Preview of ${item.fileName}`} /> : null}
-                          {item.kind === "audio" ? <audio aria-label={`Preview of ${item.fileName}`} controls src={item.previewUrl} /> : null}
-                          <a download={item.fileName} href={item.previewUrl}>Download {item.fileName}</a>
-                        </div>
-                      ) : null}
-                    </div>
-                    <Button aria-label={`Remove ${item.label}`} onClick={() => removeEvidence(index)} type="button" variant="quiet">Remove</Button>
+            <CardTitle>
+              <h1 className="m-0 font-display text-3xl leading-tight font-normal sm:text-4xl">{heading}</h1>
+            </CardTitle>
+            <CardDescription className="max-w-2xl text-sm sm:text-base">{description}</CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <div aria-label="Capture steps" className="space-y-3">
+              <Progress aria-label="Capture progress" value={progressValue} />
+              <ol className="grid grid-cols-3 gap-2">
+                {captureSteps.map(([number, label]) => (
+                  <li
+                    aria-current={step === number ? "step" : undefined}
+                    className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground sm:text-sm"
+                    key={String(number)}
+                  >
+                    <Badge variant={step === number ? "default" : "outline"}>{number}</Badge>
+                    <span className="truncate">{label}</span>
                   </li>
                 ))}
-              </ul>
+              </ol>
+            </div>
+
+            <Separator />
+
+            {errors.length > 0 ? (
+              <Alert aria-live="assertive" ref={errorSummaryRef} tabIndex={-1} variant="destructive">
+                <AlertCircleIcon aria-hidden="true" />
+                <AlertTitle>Check the highlighted details</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc space-y-1 pl-4">
+                    {errors.map((error) => <li key={error}>{error}</li>)}
+                  </ul>
+                </AlertDescription>
+              </Alert>
             ) : null}
-          </fieldset>
-        ) : null}
 
-        {step === 3 ? (
-          <fieldset>
-            <legend>Story</legend>
-            <Field className="museum-field">
-              <FieldLabel htmlFor="museum-label">Museum label <span aria-hidden="true">*</span></FieldLabel>
-              <Input aria-describedby="museum-label-hint" autoFocus id="museum-label" label="" required {...register("museumLabel")} />
-              <FieldDescription id="museum-label-hint">A small line that helps you remember what this was trying to become.</FieldDescription>
-            </Field>
-            <Field className="museum-field"><FieldLabel htmlFor="why-started">Why did this begin?</FieldLabel><Textarea id="why-started" rows={4} {...register("whyStarted")} /></Field>
-            <Field className="museum-field"><FieldLabel htmlFor="why-stopped">Where did it pause?</FieldLabel><Textarea id="why-stopped" rows={4} {...register("whyStopped")} /></Field>
-            <Field className="museum-field"><FieldLabel htmlFor="what-it-taught-me">What did it teach you?</FieldLabel><Textarea id="what-it-taught-me" rows={4} {...register("whatItTaughtMe")} /></Field>
-          </fieldset>
-        ) : null}
+            {step === 1 ? (
+              <FieldSet>
+                <FieldLegend className="font-display text-xl">Identity</FieldLegend>
+                <FieldGroup>
+                  <Field data-invalid={formErrors.title !== undefined}>
+                    <FieldLabel htmlFor="exhibit-title">Working title <span aria-hidden="true">*</span></FieldLabel>
+                    <Input aria-describedby="exhibit-title-hint" aria-invalid={formErrors.title !== undefined} autoFocus className={controlSizeClassName} id="exhibit-title" label="" required {...register("title")} />
+                    <FieldDescription id="exhibit-title-hint">A name can be tentative. It only needs to help you recognize this work.</FieldDescription>
+                  </Field>
+                  <Controller
+                    control={control}
+                    name="type"
+                    render={({ field }) => (
+                      <Field data-invalid={formErrors.type !== undefined}>
+                        <FieldLabel htmlFor="exhibit-type">Exhibit type <span aria-hidden="true">*</span></FieldLabel>
+                        <Select
+                          items={exhibitTypes}
+                          name={field.name}
+                          onValueChange={(value) => field.onChange(value ?? "")}
+                          required
+                          value={field.value || null}
+                        >
+                          <SelectTrigger
+                            aria-invalid={formErrors.type !== undefined}
+                            className={`${selectControlSizeClassName} w-full`}
+                            id="exhibit-type"
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          >
+                            <SelectValue placeholder="Choose a type" />
+                          </SelectTrigger>
+                          <SelectContent alignItemWithTrigger={false}>
+                            <SelectGroup>
+                              {exhibitTypes.map(({ label, value }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="status"
+                    render={({ field }) => (
+                      <Field data-invalid={formErrors.status !== undefined}>
+                        <FieldLabel htmlFor="exhibit-status">Initial status <span aria-hidden="true">*</span></FieldLabel>
+                        <Select
+                          items={initialStatuses}
+                          name={field.name}
+                          onValueChange={(value) => field.onChange(value ?? "")}
+                          required
+                          value={field.value}
+                        >
+                          <SelectTrigger
+                            aria-invalid={formErrors.status !== undefined}
+                            className={`${selectControlSizeClassName} w-full`}
+                            id="exhibit-status"
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent alignItemWithTrigger={false}>
+                            <SelectGroup>
+                              {initialStatuses.map(({ label, value }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    )}
+                  />
+                  <Field>
+                    <FieldLabel htmlFor="exhibit-tags">Tags</FieldLabel>
+                    <Input aria-describedby="exhibit-tags-hint" className={controlSizeClassName} id="exhibit-tags" label="" placeholder="Research, harbor, maybe later" {...register("tags")} />
+                    <FieldDescription id="exhibit-tags-hint">Separate tags with commas. They are for finding your way back, not for grading the work.</FieldDescription>
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            ) : null}
 
-        <div className="exhibit-capture__actions">
-          <Button onClick={() => setIsCancelDialogOpen(true)} type="button" variant="quiet">Cancel capture</Button>
-          <div>
-            {step > 1 ? <Button onClick={() => { clearErrors(); setInteractionErrors([]); setStep((current) => current - 1); }} type="button" variant="secondary">{step === 2 ? "Back to identity" : "Back to evidence"}</Button> : null}
-            {step === 1 ? <Button type="submit">Continue to evidence</Button> : null}
-            {step === 2 ? <Button type="submit">Continue to story</Button> : null}
-            {step === 3 ? <Button disabled={isSaving} type="submit">{isSaving ? "Saving Exhibit…" : "Save Exhibit"}</Button> : null}
-          </div>
-        </div>
-      </form>
+            {step === 2 ? (
+              <FieldSet>
+                <FieldLegend className="font-display text-xl">Evidence</FieldLegend>
+                <FieldDescription>Each trace is optional. Images, PDFs, and audio stay in this browser alongside links and notes.</FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="artifact-file">Choose an image, PDF, or audio file</FieldLabel>
+                    <Input accept="image/*,application/pdf,audio/*" className={controlSizeClassName} id="artifact-file" label="" onChange={handleFileSelection} type="file" />
+                    <FieldDescription>Up to 25 MiB per file. Your browser keeps these files in this private collection.</FieldDescription>
+                  </Field>
+                  {quotaWarning ? (
+                    <Alert role="status">
+                      <HardDriveIcon aria-hidden="true" />
+                      <AlertTitle>Local storage notice</AlertTitle>
+                      <AlertDescription>{quotaWarning}</AlertDescription>
+                    </Alert>
+                  ) : null}
+
+                  <Separator />
+
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="link-label">Link label</FieldLabel>
+                      <Input className={controlSizeClassName} id="link-label" label="" onChange={(event) => setLinkLabel(event.target.value)} value={linkLabel} />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="link-address">Link address</FieldLabel>
+                      <Input className={controlSizeClassName} id="link-address" label="" onChange={(event) => setLinkAddress(event.target.value)} placeholder="https://" type="url" value={linkAddress} />
+                    </Field>
+                    <Button className="min-h-11 justify-self-start sm:min-h-8" onClick={addLink} type="button" variant="outline">Add link</Button>
+                  </FieldGroup>
+
+                  <Separator />
+
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="note-label">Note label</FieldLabel>
+                      <Input className={controlSizeClassName} id="note-label" label="" onChange={(event) => setNoteLabel(event.target.value)} value={noteLabel} />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="exhibit-note">Note</FieldLabel>
+                      <Textarea className={textareaSizeClassName} id="exhibit-note" onChange={(event) => setNote(event.target.value)} rows={4} value={note} />
+                    </Field>
+                    <Button className="min-h-11 justify-self-start sm:min-h-8" onClick={addNote} type="button" variant="outline">Add note</Button>
+                  </FieldGroup>
+                </FieldGroup>
+
+                {evidence.length > 0 ? (
+                  <ul aria-label="Evidence waiting to be saved" className="space-y-3">
+                    {evidence.map((item, index) => (
+                      <li key={`${item.kind}-${item.label}-${index}`}>
+                        <Card size="sm">
+                          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 space-y-3">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <strong className="break-words">{item.label}</strong>
+                                <Badge variant="outline">{evidenceKindLabels[item.kind]}</Badge>
+                              </div>
+                              {"previewUrl" in item ? (
+                                <div className="grid gap-3">
+                                  {/* eslint-disable-next-line @next/next/no-img-element -- Local Blob previews require an object URL. */}
+                                  {item.kind === "image" ? <img alt={`Preview of ${item.fileName}`} className="max-h-60 max-w-full rounded-lg border object-contain" src={item.previewUrl} /> : null}
+                                  {item.kind === "pdf" ? <iframe aria-label={`Preview of ${item.fileName}`} className="h-60 w-full max-w-md rounded-lg border" src={item.previewUrl} title={`Preview of ${item.fileName}`} /> : null}
+                                  {item.kind === "audio" ? <audio aria-label={`Preview of ${item.fileName}`} className="max-w-full" controls src={item.previewUrl} /> : null}
+                                  <Button asChild className="min-h-11 justify-self-start sm:min-h-8" variant="outline">
+                                    <a download={item.fileName} href={item.previewUrl}>Download {item.fileName}</a>
+                                  </Button>
+                                </div>
+                              ) : null}
+                            </div>
+                            <Button aria-label={`Remove ${item.label}`} className="min-h-11 sm:min-h-8" onClick={() => removeEvidence(index)} type="button" variant="ghost">Remove</Button>
+                          </CardContent>
+                        </Card>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </FieldSet>
+            ) : null}
+
+            {step === 3 ? (
+              <FieldSet>
+                <FieldLegend className="font-display text-xl">Story</FieldLegend>
+                <FieldGroup>
+                  <Field data-invalid={formErrors.museumLabel !== undefined}>
+                    <FieldLabel htmlFor="museum-label">Museum label <span aria-hidden="true">*</span></FieldLabel>
+                    <Input aria-describedby="museum-label-hint" aria-invalid={formErrors.museumLabel !== undefined} autoFocus className={controlSizeClassName} id="museum-label" label="" required {...register("museumLabel")} />
+                    <FieldDescription id="museum-label-hint">A small line that helps you remember what this was trying to become.</FieldDescription>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="why-started">Why did this begin?</FieldLabel>
+                    <Textarea className={textareaSizeClassName} id="why-started" rows={4} {...register("whyStarted")} />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="why-stopped">Where did it pause?</FieldLabel>
+                    <Textarea className={textareaSizeClassName} id="why-stopped" rows={4} {...register("whyStopped")} />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="what-it-taught-me">What did it teach you?</FieldLabel>
+                    <Textarea className={textareaSizeClassName} id="what-it-taught-me" rows={4} {...register("whatItTaughtMe")} />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            ) : null}
+          </CardContent>
+
+          <CardFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+            <Button className="min-h-11 w-full sm:min-h-8 sm:w-auto" onClick={() => setIsCancelDialogOpen(true)} type="button" variant="ghost">Cancel capture</Button>
+            <div className="grid w-full gap-2 sm:flex sm:w-auto">
+              {step > 1 ? (
+                <Button
+                  className="min-h-11 sm:min-h-8"
+                  onClick={() => { clearErrors(); setInteractionErrors([]); setStep((current) => current - 1); }}
+                  type="button"
+                  variant="outline"
+                >
+                  {step === 2 ? "Back to identity" : "Back to evidence"}
+                </Button>
+              ) : null}
+              {step === 1 ? <Button className="min-h-11 sm:min-h-8" type="submit">Continue to evidence</Button> : null}
+              {step === 2 ? <Button className="min-h-11 sm:min-h-8" type="submit">Continue to story</Button> : null}
+              {step === 3 ? <Button className="min-h-11 sm:min-h-8" disabled={isSaving} type="submit">{isSaving ? "Saving Exhibit…" : "Save Exhibit"}</Button> : null}
+            </div>
+          </CardFooter>
+        </form>
+      </Card>
 
       <Dialog
         description="Leaving now will discard this unsaved draft."
@@ -420,9 +569,9 @@ export function ExhibitCapture({ repository: suppliedRepository, onNavigate = br
         onOpenChange={setIsCancelDialogOpen}
         title="Leave this Exhibit?"
       >
-        <div className="exhibit-capture__dialog-actions">
-          <Button onClick={() => setIsCancelDialogOpen(false)} variant="secondary">Keep capturing</Button>
-          <Button onClick={() => onNavigate("/museum")} variant="danger">Leave without saving</Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button className="min-h-11 sm:min-h-8" onClick={() => setIsCancelDialogOpen(false)} variant="outline">Keep capturing</Button>
+          <Button className="min-h-11 sm:min-h-8" onClick={() => onNavigate("/museum")} variant="destructive">Leave without saving</Button>
         </div>
       </Dialog>
     </motion.main>

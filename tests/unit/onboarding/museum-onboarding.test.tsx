@@ -39,6 +39,11 @@ describe("MuseumOnboarding", () => {
     render(<MuseumOnboarding repository={repository} />);
 
     expect(await screen.findByRole("button", { name: "Install Harbor Queue demo" })).toBeVisible();
+    const emptyCollection = screen.getByRole("region", { name: "Your collection is empty." });
+    expect(emptyCollection).toHaveAttribute("data-slot", "card");
+    expect(emptyCollection.querySelector('[data-slot="card-header"]')).toBeInTheDocument();
+    expect(emptyCollection.querySelector('[data-slot="card-content"]')).toBeInTheDocument();
+    expect(emptyCollection.querySelector('[data-slot="card-footer"]')).toBeInTheDocument();
     await expect(repository.listExhibits()).resolves.toEqual([]);
 
     await user.click(screen.getByRole("button", { name: "Install Harbor Queue demo" }));

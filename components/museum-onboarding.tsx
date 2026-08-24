@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { EmptyCollectionState } from "@/components/empty-collection-state";
 import { MuseumGallery } from "@/components/museum-gallery";
 import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Exhibit } from "@/lib/domain";
 import { ExhibitRepository } from "@/lib/persistence";
 import { installHarborQueueDemo } from "@/lib/services/install-harbor-queue-demo";
@@ -49,12 +50,15 @@ export function MuseumOnboarding({ repository: suppliedRepository }: Readonly<Mu
 
   if (loadError) {
     return (
-      <section aria-labelledby="onboarding-recovery-title" className="empty-collection-state">
-        <p className="museum-eyebrow">Collection unavailable</p>
-        <h1 id="onboarding-recovery-title">Your collection could not be opened.</h1>
-        <p role="alert">Your collection could not be opened. Your local records have not been changed. Try again when this browser is ready.</p>
-        <Button onClick={() => setLoadAttempt((current) => current + 1)} variant="secondary">Try opening collection again</Button>
-      </section>
+      <Card aria-labelledby="onboarding-recovery-title" className="max-w-2xl" role="region">
+        <CardHeader>
+          <CardTitle aria-level={1} id="onboarding-recovery-title" role="heading">Your collection could not be opened.</CardTitle>
+          <CardDescription role="alert">Your collection could not be opened. Your local records have not been changed. Try again when this browser is ready.</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button onClick={() => setLoadAttempt((current) => current + 1)} variant="outline">Try opening collection again</Button>
+        </CardFooter>
+      </Card>
     );
   }
   if (exhibits === null) return <p role="status">Opening your private collection…</p>;

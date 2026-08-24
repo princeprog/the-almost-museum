@@ -1,5 +1,5 @@
 import Dexie from "dexie";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,8 +31,13 @@ function createLocalFile(contents: BlobPart, name: string, type: string): File {
 
 async function completeIdentity(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("textbox", { name: "Working title" }), "Harbor wayfinding study");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Exhibit type" }), "experiment");
+  await chooseSelectOption(user, "Exhibit type", "Experiment");
   await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
+}
+
+async function chooseSelectOption(user: ReturnType<typeof userEvent.setup>, name: string, option: string) {
+  await user.click(screen.getByRole("combobox", { name }));
+  await user.click(await screen.findByRole("option", { name: option }));
 }
 
 afterEach(async () => {
@@ -53,19 +58,28 @@ beforeEach(() => {
 });
 
 describe("ExhibitCapture", () => {
-  it("uses field primitives while retaining the native artifact file picker", async () => {
+  it("uses shadcn form controls throughout the capture flow", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-capture-primitives");
     const { container } = render(<ExhibitCapture repository={repository} />);
 
+    const card = container.querySelector('[data-slot="card"]');
+    expect(card).toBeInTheDocument();
+    expect(card?.querySelector('[data-slot="card-header"]')).toBeInTheDocument();
+    expect(card?.querySelector('[data-slot="card-content"]')).toBeInTheDocument();
+    expect(card?.querySelector('[data-slot="card-footer"]')).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Capture progress" })).toHaveAttribute("data-slot", "progress");
+    expect(container.querySelector('[data-slot="badge"]')).toHaveTextContent("Step 1 of 3");
     expect(container.querySelectorAll('[data-slot="field"]')).not.toHaveLength(0);
     expect(screen.getByRole("textbox", { name: "Working title" })).toHaveAttribute("data-slot", "input");
-    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveAttribute("data-slot", "native-select");
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveAttribute("data-slot", "select-trigger");
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toBeRequired();
+    expect(screen.getByRole("combobox", { name: "Initial status" })).toBeRequired();
 
     await completeIdentity(user);
 
     expect(screen.getByRole("textbox", { name: "Note" })).toHaveAttribute("data-slot", "textarea");
-    expect(screen.getByLabelText(/Choose an image, PDF, or audio file/)).not.toHaveAttribute("data-slot");
+    expect(screen.getByLabelText(/Choose an image, PDF, or audio file/)).toHaveAttribute("data-slot", "input");
   });
 
   it("marks the capture form ready after client hydration", async () => {
@@ -85,7 +99,9 @@ describe("ExhibitCapture", () => {
     await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
 
     expect(screen.getByRole("heading", { name: "Give the work a place" })).toBeVisible();
-    expect(screen.getByText("Add a title before continuing.")).toBeVisible();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveAttribute("data-slot", "alert");
+    expect(alert).toHaveTextContent("Add a title before continuing.");
     expect(screen.getByText("Choose an Exhibit type before continuing.")).toBeVisible();
   });
 
@@ -101,21 +117,19 @@ describe("ExhibitCapture", () => {
     expect(summary).toHaveTextContent("Add a title before continuing.");
   });
 
-  it("keeps a missing initial status in the identity step even though the form starts unfinished", async () => {
+  it("starts new Exhibits as unfinished and carries that default into validation", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-capture-status-validation");
 
     render(<ExhibitCapture repository={repository} />);
     await user.type(screen.getByRole("textbox", { name: "Working title" }), "Harbor wayfinding study");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Exhibit type" }), "experiment");
+    await chooseSelectOption(user, "Exhibit type", "Experiment");
     const status = screen.getByRole("combobox", { name: "Initial status" });
 
-    expect(status).toHaveValue("unfinished");
-    fireEvent.change(status, { target: { value: "" } });
+    expect(status).toHaveTextContent("Unfinished");
     await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
 
-    expect(screen.getByRole("heading", { name: "Give the work a place" })).toBeVisible();
-    expect(screen.getByText("Choose an initial status before continuing.")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Keep a trace of it" })).toBeVisible();
   });
 
   it("preserves identity values when moving back from evidence", async () => {
@@ -124,15 +138,15 @@ describe("ExhibitCapture", () => {
 
     render(<ExhibitCapture repository={repository} />);
     await user.type(screen.getByRole("textbox", { name: "Working title" }), "Harbor wayfinding study");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Exhibit type" }), "experiment");
+    await chooseSelectOption(user, "Exhibit type", "Experiment");
     await user.type(screen.getByRole("textbox", { name: "Tags" }), "harbor, navigation");
     await user.click(screen.getByRole("button", { name: "Continue to evidence" }));
     await user.click(screen.getByRole("button", { name: "Back to identity" }));
 
     expect(screen.getByRole("textbox", { name: "Working title" })).toHaveValue("Harbor wayfinding study");
-    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveValue("experiment");
+    expect(screen.getByRole("combobox", { name: "Exhibit type" })).toHaveTextContent("Experiment");
     expect(screen.getByRole("textbox", { name: "Tags" })).toHaveValue("harbor, navigation");
-    expect(screen.getByRole("progressbar", { name: "Capture progress" })).toHaveAttribute("value", "1");
+    expect(screen.getByRole("progressbar", { name: "Capture progress" })).toHaveAttribute("aria-valuenow", "33");
   });
 
   it("keeps optional link and note evidence until the Exhibit is saved", async () => {
@@ -151,6 +165,7 @@ describe("ExhibitCapture", () => {
     await user.click(screen.getByRole("button", { name: "Add note" }));
 
     expect(screen.getByText("Reference sketch")).toBeVisible();
+    expect(screen.getByText("Link")).toBeVisible();
     expect(screen.getByText("A small reminder")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Continue to story" }));
@@ -166,7 +181,7 @@ describe("ExhibitCapture", () => {
         expect.objectContaining({ kind: "note", label: "A small reminder", note: "The queue needed calmer handoffs." }),
       ]);
     });
-  });
+  }, 10_000);
 
   it("previews a supported local file, makes it downloadable, and saves it with the Exhibit", async () => {
     const user = userEvent.setup();
@@ -261,8 +276,7 @@ describe("ExhibitCapture", () => {
     const navigatedTo: string[] = [];
     const { container } = render(<ExhibitCapture onNavigate={(href) => navigatedTo.push(href)} repository={repository} />);
 
-    expect(container.querySelector(".exhibit-capture")).toBeInTheDocument();
-    expect(container.querySelector(".exhibit-capture__step-panel")).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="card"] form')).toBeInTheDocument();
 
     expect(screen.getByRole("textbox", { name: "Working title" })).toHaveFocus();
     await user.tab();

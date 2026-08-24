@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 
 async function openHydratedCapture(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/exhibit/new");
-  await expect(page.locator("main.exhibit-capture")).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+  const main = page.getByRole("main");
+  await expect(main).toHaveAttribute("aria-busy", "false", { timeout: 15_000 });
+  await expect(main).toHaveCSS("transform", "none");
 }
 
 test("serves the exported museum landing page", async ({ page }) => {
@@ -84,6 +86,14 @@ for (const viewport of landingViewports) {
   });
 }
 
+async function chooseCaptureType(page: import("@playwright/test").Page, label: string): Promise<void> {
+  const trigger = page.getByRole("combobox", { name: "Exhibit type" });
+  await trigger.click();
+  await page.getByRole("option", { name: label }).focus();
+  await page.keyboard.press("Enter");
+  await expect(trigger).toContainText(label);
+}
+
 test("keeps landing navigation, skip focus, and CTA destinations functional", async ({ page }) => {
   await page.goto("/");
 
@@ -97,6 +107,50 @@ test("keeps landing navigation, skip focus, and CTA destinations functional", as
   await expect(skipLink).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#app-root")).toBeFocused();
+});
+
+for (const viewport of [
+  { height: 812, name: "phone", width: 375 },
+  { height: 1024, name: "tablet", width: 768 },
+  { height: 900, name: "desktop", width: 1440 },
+] as const) {
+  test(`keeps the shadcn Museum collection responsive on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/museum");
+
+    const emptyCollection = page.getByRole("region", { name: "Your collection is empty." });
+    await expect(emptyCollection).toHaveAttribute("data-slot", "card");
+    await expect(page.getByRole("link", { name: "Create Exhibit" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Install Harbor Queue demo" }).click();
+
+    const filters = page.getByRole("region", { name: "Filter collection" });
+    const exhibits = page.getByRole("list", { name: "Exhibits" });
+    await expect(filters).toHaveAttribute("data-slot", "card");
+    await expect(exhibits).toHaveAttribute("data-view", "grid");
+    await expect(exhibits.getByRole("article")).toHaveCount(1);
+
+    const layout = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth);
+  });
+}
+
+test("keeps the shared navigation pinned while the page scrolls", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const header = page.locator(".site-header");
+  await expect(header).toBeVisible();
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
+
+  const headerBox = await header.boundingBox();
+  expect(headerBox).not.toBeNull();
+  expect(headerBox!.y).toBeGreaterThanOrEqual(0);
+  expect(headerBox!.y).toBeLessThanOrEqual(1);
 });
 
 test("disables landing scroll snapping for reduced motion", async ({ page }) => {
@@ -117,7 +171,7 @@ test("captures an Exhibit through the exported clean routes", async ({ page }) =
   await openHydratedCapture(page);
 
   await page.getByRole("textbox", { name: "Working title" }).fill("Harbor wayfinding study");
-  await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
+  await chooseCaptureType(page, "Experiment");
   await page.getByRole("button", { name: "Continue to evidence" }).click();
   await page.getByRole("button", { name: "Continue to story" }).click();
   await page.getByRole("textbox", { name: "Museum label" }).fill("A quieter route through the harbor");
@@ -131,7 +185,7 @@ test("moves focus to the surviving Exhibit heading after a closure replaces its 
   await openHydratedCapture(page);
 
   await page.getByRole("textbox", { name: "Working title" }).fill("Focus restoration study");
-  await page.getByRole("combobox", { name: "Exhibit type" }).selectOption("experiment");
+  await chooseCaptureType(page, "Experiment");
   await page.getByRole("button", { name: "Continue to evidence" }).click();
   await page.getByRole("button", { name: "Continue to story" }).click();
   await page.getByRole("textbox", { name: "Museum label" }).fill("A safe return after closure");
@@ -143,17 +197,56 @@ test("moves focus to the surviving Exhibit heading after a closure replaces its 
   await expect(page.getByRole("heading", { name: "Focus restoration study" })).toBeFocused();
 });
 
-test("keeps the capture form inside a narrow viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await openHydratedCapture(page);
+for (const viewport of [
+  { controlHeight: 44, height: 812, name: "phone", width: 375 },
+  { controlHeight: 40, height: 900, name: "desktop", width: 1440 },
+] as const) {
+  test(`keeps the capture form responsive on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await openHydratedCapture(page);
 
-  await expect(page.getByRole("textbox", { name: "Working title" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue to evidence" })).toBeVisible();
-  await expect(page.locator(".exhibit-capture__step-panel")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Working title" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue to evidence" })).toBeVisible();
+    await expect(page.locator('[data-slot="card"] form')).toBeVisible();
 
-  const pageWidth = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    viewportWidth: window.innerWidth,
-  }));
-  expect(pageWidth.scrollWidth).toBeLessThanOrEqual(pageWidth.viewportWidth);
-});
+    const pageLayout = await page.evaluate(() => {
+      const headingStyles = getComputedStyle(document.querySelector("h1")!);
+      return {
+        bodyFont: getComputedStyle(document.body).fontFamily,
+        controlFonts: Array.from(document.querySelectorAll('[data-slot="input"], [data-slot="select-trigger"]')).map(
+          (control) => getComputedStyle(control).fontFamily,
+        ),
+        controlHeights: Array.from(document.querySelectorAll('[data-slot="input"], [data-slot="select-trigger"]')).map(
+          (control) => control.getBoundingClientRect().height,
+        ),
+        headingFontSize: Number.parseFloat(headingStyles.fontSize),
+        headingMarginBottom: Number.parseFloat(headingStyles.marginBottom),
+        labelFonts: Array.from(document.querySelectorAll('[data-slot="field-label"]')).map(
+          (label) => getComputedStyle(label).fontFamily,
+        ),
+        nativeSelectCount: document.querySelectorAll('[data-slot="native-select"]').length,
+        selectTriggerCount: document.querySelectorAll('[data-slot="select-trigger"]').length,
+        scrollWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+      };
+    });
+    expect(pageLayout.scrollWidth).toBeLessThanOrEqual(pageLayout.viewportWidth);
+    expect(pageLayout.nativeSelectCount).toBe(0);
+    expect(pageLayout.selectTriggerCount).toBe(2);
+    expect(pageLayout.controlHeights.every((height) => height === viewport.controlHeight)).toBe(true);
+    expect(pageLayout.controlFonts.every((font) => font === pageLayout.bodyFont)).toBe(true);
+    expect(pageLayout.labelFonts.every((font) => font === pageLayout.bodyFont)).toBe(true);
+
+    if (viewport.name === "desktop") {
+      expect(pageLayout.headingFontSize).toBeLessThanOrEqual(40);
+      expect(pageLayout.headingMarginBottom).toBe(0);
+    } else {
+      await page.getByRole("button", { name: "Cancel capture" }).click();
+      const keepBox = await page.getByRole("button", { name: "Keep capturing" }).boundingBox();
+      const leaveBox = await page.getByRole("button", { name: "Leave without saving" }).boundingBox();
+      expect(keepBox).not.toBeNull();
+      expect(leaveBox).not.toBeNull();
+      expect(keepBox!.y).toBeLessThan(leaveBox!.y);
+    }
+  });
+}
