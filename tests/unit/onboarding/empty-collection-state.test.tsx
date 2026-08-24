@@ -11,6 +11,7 @@ describe("EmptyCollectionState", () => {
     render(<EmptyCollectionState onInstallDemo={onInstallDemo} />);
 
     expect(screen.getByRole("heading", { name: "Your collection is empty." })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Your collection is empty." })).toHaveAttribute("data-slot", "empty");
     expect(screen.getByRole("link", { name: "Create Exhibit" })).toHaveAttribute("href", "/exhibit/new");
     expect(screen.getByRole("link", { name: "Create Exhibit" })).not.toHaveAttribute("role", "button");
     expect(screen.getByRole("button", { name: "Install Harbor Queue demo" })).toBeVisible();

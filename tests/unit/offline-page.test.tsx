@@ -8,6 +8,8 @@ describe("offline fallback", () => {
     render(<OfflinePage />);
 
     expect(screen.getByRole("heading", { name: "You can still visit the Museum." })).toBeVisible();
+    expect(screen.getByRole("region", { name: "You can still visit the Museum." })).toHaveAttribute("data-slot", "card");
+    expect(screen.getByRole("alert")).toHaveTextContent("saved collection");
     expect(screen.getByRole("link", { name: "Try the Museum again" })).toHaveAttribute("href", "/museum");
   });
 });

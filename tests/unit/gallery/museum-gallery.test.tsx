@@ -47,6 +47,13 @@ async function seedCollection(repository: ExhibitRepository) {
   });
 }
 
+async function chooseOption(user: ReturnType<typeof userEvent.setup>, name: string, option: string) {
+  const trigger = screen.getByRole("combobox", { name });
+  await user.click(trigger);
+  await user.click(await screen.findByRole("option", { name: option }));
+  return trigger;
+}
+
 afterEach(async () => {
   localStorage.clear();
   for (const repository of repositories) repository.close();
@@ -104,7 +111,7 @@ describe("MuseumGallery", () => {
     expect(lobby).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("keeps gallery filters as native selects while their selection changes", async () => {
+  it("composes gallery filters from shadcn selects while their selection changes", async () => {
     const user = userEvent.setup();
     const repository = createRepository("almost-museum-gallery-native-selects");
     await seedCollection(repository);
@@ -120,20 +127,20 @@ describe("MuseumGallery", () => {
     expect(status).toHaveAttribute("id", "gallery-status");
     expect(tag).toHaveAttribute("id", "gallery-tag");
     expect(sort).toHaveAttribute("id", "gallery-sort");
-    expect(type.closest("[data-slot='native-select-wrapper']")).toBeTruthy();
-    expect(status.closest("[data-slot='native-select-wrapper']")).toBeTruthy();
-    expect(tag.closest("[data-slot='native-select-wrapper']")).toBeTruthy();
-    expect(sort.closest("[data-slot='native-select-wrapper']")).toBeTruthy();
+    expect(type).toHaveAttribute("data-slot", "select-trigger");
+    expect(status).toHaveAttribute("data-slot", "select-trigger");
+    expect(tag).toHaveAttribute("data-slot", "select-trigger");
+    expect(sort).toHaveAttribute("data-slot", "select-trigger");
 
-    await user.selectOptions(type, "message");
-    await user.selectOptions(status, "revived");
-    await user.selectOptions(tag, "Harbor");
-    await user.selectOptions(sort, "title-asc");
+    await chooseOption(user, "Exhibit type", "Message");
+    await chooseOption(user, "Status", "Revived");
+    await chooseOption(user, "Tag", "Harbor");
+    await chooseOption(user, "Sort collection", "Title, A to Z");
 
-    expect(type).toHaveValue("message");
-    expect(status).toHaveValue("revived");
-    expect(tag).toHaveValue("Harbor");
-    expect(sort).toHaveValue("title-asc");
+    expect(type).toHaveTextContent("Message");
+    expect(status).toHaveTextContent("Revived");
+    expect(tag).toHaveTextContent("Harbor");
+    expect(sort).toHaveTextContent("Title, A to Z");
     expect(screen.getByRole("link", { name: /Unsent field notes/ })).toBeVisible();
   });
 
@@ -154,7 +161,7 @@ describe("MuseumGallery", () => {
     expect(screen.queryByRole("link", { name: /Harbor Queue Redesign/ })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Lobby" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Tag" }), "Harbor");
+    await chooseOption(user, "Tag", "Harbor");
     await user.type(screen.getByRole("searchbox", { name: "Search collection" }), "letter");
     expect(screen.getByRole("link", { name: /Unsent field notes/ })).toBeVisible();
     expect(screen.queryByRole("link", { name: /Harbor Queue Redesign/ })).not.toBeInTheDocument();
@@ -182,13 +189,13 @@ describe("MuseumGallery", () => {
 
     await screen.findByRole("heading", { name: "Lobby" });
     await user.click(screen.getByRole("button", { name: "Show list view" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Sort collection" }), "title-asc");
+    await chooseOption(user, "Sort collection", "Title, A to Z");
     firstRender.unmount();
 
     render(<MuseumGallery repository={repository} />);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Show grid view" })).toBeVisible());
-    expect(screen.getByRole("combobox", { name: "Sort collection" })).toHaveValue("title-asc");
+    expect(screen.getByRole("combobox", { name: "Sort collection" })).toHaveTextContent("Title, A to Z");
     expect(screen.getByRole("list", { name: "Exhibits" })).toHaveAttribute("data-view", "list");
   });
 

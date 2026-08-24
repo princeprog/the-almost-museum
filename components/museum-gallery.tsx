@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardAction,
@@ -16,8 +17,10 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getExhibitRooms, type Exhibit, type ExhibitStatus, type ExhibitType } from "@/lib/domain";
 import { filterAndSortExhibits, type GalleryFilters, type GalleryRoom, type GallerySort } from "@/lib/gallery";
@@ -167,23 +170,24 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
 
   if (loadError) {
     return (
-      <Card aria-labelledby="gallery-recovery-title" className="max-w-2xl" role="region">
-        <CardHeader>
-          <CardTitle aria-level={1} id="gallery-recovery-title" role="heading">Your collection could not be opened.</CardTitle>
-          <CardDescription role="alert">
+      <Alert className="max-w-2xl" variant="destructive">
+          <AlertTitle id="gallery-recovery-title">Your collection could not be opened.</AlertTitle>
+          <AlertDescription>
             Your collection could not be opened. Your local records have not been changed. Try again, or return after this browser is ready.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button onClick={() => setLoadAttempt((current) => current + 1)} variant="outline">
+          </AlertDescription>
+          <Button className="mt-3 min-h-11 w-fit sm:min-h-8" onClick={() => setLoadAttempt((current) => current + 1)} variant="outline">
             Try opening collection again
           </Button>
-        </CardFooter>
-      </Card>
+      </Alert>
     );
   }
 
-  if (exhibits === null) return <p role="status">Opening your private collection…</p>;
+  if (exhibits === null) return (
+    <Card aria-label="Opening your private collection" className="w-full max-w-2xl" role="status">
+      <CardHeader><Skeleton className="h-6 w-44" /><Skeleton className="h-4 w-full max-w-sm" /></CardHeader>
+      <CardContent className="grid gap-3"><Skeleton className="h-11 w-full" /><Skeleton className="h-32 w-full" /></CardContent>
+    </Card>
+  );
 
   return (
     <section aria-labelledby="museum-gallery-title" className="museum-collection grid w-full gap-6">
@@ -239,32 +243,31 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
             </Field>
             <Field>
               <FieldLabel htmlFor="gallery-type">Exhibit type</FieldLabel>
-              <NativeSelect id="gallery-type" onChange={(event) => setFilterControls((current) => ({ ...current, type: event.target.value as GalleryFilters["type"] }))} value={filterControls.type}>
-                <option value="all">All types</option>
-                {typeOptions.map((type) => <option key={type} value={type}>{formatLabel(type)}</option>)}
-              </NativeSelect>
+              <Select items={[{ label: "All types", value: "all" }, ...typeOptions.map((type) => ({ label: formatLabel(type), value: type }))]} onValueChange={(value) => setFilterControls((current) => ({ ...current, type: value as GalleryFilters["type"] }))} value={filterControls.type}>
+                <SelectTrigger className="min-h-11 w-full sm:min-h-8" id="gallery-type"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectGroup><SelectItem value="all">All types</SelectItem>{typeOptions.map((type) => <SelectItem key={type} value={type}>{formatLabel(type)}</SelectItem>)}</SelectGroup></SelectContent>
+              </Select>
             </Field>
             <Field>
               <FieldLabel htmlFor="gallery-status">Status</FieldLabel>
-              <NativeSelect id="gallery-status" onChange={(event) => setFilterControls((current) => ({ ...current, status: event.target.value as GalleryFilters["status"] }))} value={filterControls.status}>
-                <option value="all">All statuses</option>
-                {statusOptions.map((status) => <option key={status} value={status}>{formatLabel(status)}</option>)}
-              </NativeSelect>
+              <Select items={[{ label: "All statuses", value: "all" }, ...statusOptions.map((status) => ({ label: formatLabel(status), value: status }))]} onValueChange={(value) => setFilterControls((current) => ({ ...current, status: value as GalleryFilters["status"] }))} value={filterControls.status}>
+                <SelectTrigger className="min-h-11 w-full sm:min-h-8" id="gallery-status"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectGroup><SelectItem value="all">All statuses</SelectItem>{statusOptions.map((status) => <SelectItem key={status} value={status}>{formatLabel(status)}</SelectItem>)}</SelectGroup></SelectContent>
+              </Select>
             </Field>
             <Field>
               <FieldLabel htmlFor="gallery-tag">Tag</FieldLabel>
-              <NativeSelect id="gallery-tag" onChange={(event) => setFilterControls((current) => ({ ...current, tag: event.target.value }))} value={filterControls.tag}>
-                <option value="all">All tags</option>
-                {tags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
-              </NativeSelect>
+              <Select items={[{ label: "All tags", value: "all" }, ...tags.map((tag) => ({ label: tag, value: tag }))]} onValueChange={(value) => setFilterControls((current) => ({ ...current, tag: value ?? "all" }))} value={filterControls.tag}>
+                <SelectTrigger className="min-h-11 w-full sm:min-h-8" id="gallery-tag"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectGroup><SelectItem value="all">All tags</SelectItem>{tags.map((tag) => <SelectItem key={tag} value={tag}>{tag}</SelectItem>)}</SelectGroup></SelectContent>
+              </Select>
             </Field>
             <Field>
               <FieldLabel htmlFor="gallery-sort">Sort collection</FieldLabel>
-              <NativeSelect id="gallery-sort" onChange={(event) => setSort(event.target.value as GallerySort)} value={sort}>
-                <option value="updated-desc">Recently tended</option>
-                <option value="created-desc">Recently added</option>
-                <option value="title-asc">Title, A to Z</option>
-              </NativeSelect>
+              <Select items={[{ label: "Recently tended", value: "updated-desc" }, { label: "Recently added", value: "created-desc" }, { label: "Title, A to Z", value: "title-asc" }]} onValueChange={(value) => setSort(value as GallerySort)} value={sort}>
+                <SelectTrigger className="min-h-11 w-full sm:min-h-8" id="gallery-sort"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectGroup><SelectItem value="updated-desc">Recently tended</SelectItem><SelectItem value="created-desc">Recently added</SelectItem><SelectItem value="title-asc">Title, A to Z</SelectItem></SelectGroup></SelectContent>
+              </Select>
             </Field>
           </FieldGroup>
         </CardContent>
@@ -288,17 +291,17 @@ export function MuseumGallery({ initialExhibits, repository: suppliedRepository 
           {visibleExhibits.map((exhibit) => <GalleryCard exhibit={exhibit} key={exhibit.id} />)}
         </ul>
       ) : (
-        <Card aria-labelledby="gallery-empty-title" className="max-w-2xl" role="region">
-          <CardHeader>
-            <CardTitle aria-level={2} id="gallery-empty-title" role="heading">Nothing is hidden here.</CardTitle>
-            <CardDescription>Try a different room or loosen one of the filters to return to your collection.</CardDescription>
-          </CardHeader>
-          <CardFooter>
+        <Empty aria-labelledby="gallery-empty-title" className="max-w-2xl border" role="region">
+          <EmptyHeader>
+            <EmptyTitle aria-level={2} id="gallery-empty-title" role="heading">Nothing is hidden here.</EmptyTitle>
+            <EmptyDescription>Try a different room or loosen one of the filters to return to your collection.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button onClick={() => { setFilterControls(defaultFilterControls); setSort("updated-desc"); }} variant="outline">
               Clear filters
             </Button>
-          </CardFooter>
-        </Card>
+          </EmptyContent>
+        </Empty>
       )}
     </section>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   registerMuseumServiceWorker,
   shouldRegisterMuseumServiceWorker,
@@ -27,11 +28,14 @@ export function ServiceWorkerRegistration() {
   if (!isUpdateAvailable) return null;
 
   return (
-    <aside aria-live="polite" className="service-worker-update" role="status">
-      <p>A new version of Almost Museum is ready.</p>
-      <Button onClick={() => window.location.reload()} variant="secondary">
+    <Alert aria-live="polite" className="fixed right-4 bottom-4 z-50 max-w-sm shadow-lg" role="status">
+      <AlertTitle>Update ready</AlertTitle>
+      <AlertDescription>A new version of Almost Museum is ready.</AlertDescription>
+      <AlertAction>
+      <Button className="min-h-11 sm:min-h-8" onClick={() => window.location.reload()} variant="secondary">
         Refresh to update
       </Button>
-    </aside>
+      </AlertAction>
+    </Alert>
   );
 }

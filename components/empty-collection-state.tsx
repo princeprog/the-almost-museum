@@ -4,13 +4,12 @@ import Link from "next/link";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 export interface EmptyCollectionStateProps {
   onInstallDemo: () => void;
@@ -19,30 +18,30 @@ export interface EmptyCollectionStateProps {
 /** A deliberate first-run choice; rendering it never writes to the collection. */
 export function EmptyCollectionState({ onInstallDemo }: Readonly<EmptyCollectionStateProps>) {
   return (
-    <Card
+    <Empty
       aria-labelledby="empty-collection-title"
-      className="mx-auto w-full max-w-2xl"
+      className="mx-auto w-full max-w-2xl border"
       role="region"
     >
-      <CardHeader>
-        <CardTitle aria-level={1} id="empty-collection-title" role="heading">
+      <EmptyHeader>
+        <EmptyTitle aria-level={1} id="empty-collection-title" role="heading">
           Your collection is empty.
-        </CardTitle>
-        <CardDescription>
+        </EmptyTitle>
+        <EmptyDescription>
           Start with something unfinished, or install a single example to see how an Exhibit can hold its story.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
         <p id="harbor-queue-demo-description">
           The demo adds one unfinished example, The Harbor Queue Redesign, to this private collection.
         </p>
-      </CardContent>
-      <CardFooter className="flex-wrap gap-2">
-        <Link className={buttonVariants()} href="/exhibit/new">Create Exhibit</Link>
-        <Button aria-describedby="harbor-queue-demo-description" onClick={onInstallDemo} variant="outline">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
+        <Link className={buttonVariants({ className: "min-h-11 w-full sm:w-auto" })} href="/exhibit/new">Create Exhibit</Link>
+        <Button className="min-h-11 w-full sm:w-auto" aria-describedby="harbor-queue-demo-description" onClick={onInstallDemo} variant="outline">
           Install Harbor Queue demo
         </Button>
-      </CardFooter>
-    </Card>
+        </div>
+      </EmptyContent>
+    </Empty>
   );
 }
