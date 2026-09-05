@@ -50,6 +50,7 @@ describe("museum shell", () => {
     expect(museumLink).toHaveClass("navigation-link--featured");
     expect(screen.getAllByRole("main")).toHaveLength(1);
     expect(document.querySelector(".museum-paper-texture")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Almost Museum home" })).toHaveClass("wordmark");
 
     await user.tab();
     expect(screen.getByRole("link", { name: "Skip to content" })).toHaveFocus();
